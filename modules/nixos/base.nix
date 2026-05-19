@@ -96,6 +96,7 @@
     hideMounts = true;
     directories = [
       "/etc/ssh"
+      "/etc/sops/age"
       "/var/lib/jellyfin"
       "/var/lib/authentik"
       "/var/lib/postgresql"
@@ -114,4 +115,26 @@
 
   # /persist itself must survive — it's on @persist subvolume, not wiped
   fileSystems."/persist".neededForBoot = true;
+
+  # sops-nix secrets management with age encryption
+  sops = {
+    defaultSopsFile = ../../secrets/cloudflare-tunnel.yaml;
+    age.keyFile = "/persist/etc/sops/age/keys.txt";
+  };
+
+  sops.secrets."cloudflare_tunnel_token" = {
+    sopsFile = ../../secrets/cloudflare-tunnel.yaml;
+  };
+
+  sops.secrets."vpn_wg_conf" = {
+    sopsFile = ../../secrets/vpn.yaml;
+  };
+
+  sops.secrets."pelican_token_id" = {
+    sopsFile = ../../secrets/pelican.yaml;
+  };
+
+  sops.secrets."pelican_token" = {
+    sopsFile = ../../secrets/pelican.yaml;
+  };
 }
