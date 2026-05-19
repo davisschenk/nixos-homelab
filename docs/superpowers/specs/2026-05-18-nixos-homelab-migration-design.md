@@ -38,6 +38,7 @@ nixos-homelab/
 │       ├── media.nix
 │       ├── arr.nix
 │       ├── auth.nix
+│       ├── pelican.nix
 │       ├── monitoring.nix
 │       ├── containers.nix
 │       └── gaming-vm.nix
@@ -56,6 +57,7 @@ nixos-homelab/
 | `nixpkgs` (nixos-unstable) | Base packages |
 | `nixarr` | arr stack + VPN network namespace |
 | `authentik-nix` | Authentik NixOS module (community) |
+| `nix-pelican` | Pelican Panel + Wings NixOS modules (community) |
 | `sops-nix` | Secrets decryption at activation |
 | `disko` | Declarative disk partitioning |
 | `nixos-impermanence` | Root wipe + persist bind-mounts |
@@ -105,6 +107,8 @@ Root (`/`) is rolled back to a blank btrfs snapshot on every boot via `nixos-imp
 | `/persist/var/lib/grafana` | Grafana dashboards & config |
 | `/persist/containers/` | oci-container bind-mount volumes |
 | `/persist/var/lib/libvirt` | VM definitions |
+| `/persist/var/lib/pelican` | Pelican Panel state |
+| `/persist/var/lib/pelican-wings` | Wings root directory (server volumes, configs) |
 
 VM disk image lives at `/data/vm/windows.qcow2` (too large for `/persist`).
 
@@ -132,6 +136,10 @@ VPN credentials stored in `secrets/vpn.yaml` (sops-nix).
 
 Authentik runs natively (no Docker). PostgreSQL is managed by the module. State persisted at `/persist/var/lib/authentik` and `/persist/var/lib/postgresql`.
 
+### nix-pelican (community flake)
+
+Both Pelican Panel and Wings run natively as systemd services via `services.pelican.panel` and `services.pelican.wings`. Wings still requires Docker to manage game server containers, but Wings itself is not containerised. Token and credentials managed via sops-nix (`secrets/pelican.yaml`).
+
 ### oci-containers (`virtualisation.oci-containers`)
 
 Nix-declared Docker/Podman containers sharing a `homelab` bridge network.
@@ -144,8 +152,6 @@ Nix-declared Docker/Podman containers sharing a `homelab` bridge network.
 | Copyparty | `copyparty/copyparty` | `/persist/containers/copyparty` |
 | Komodo | `ghcr.io/moghtech/komodo` | `/persist/containers/komodo` |
 | Dozzle | `amir20/dozzle` | — (read-only Docker socket) |
-| Pelican panel | `ghcr.io/pelican-dev/panel:latest` | `/persist/containers/pelican` |
-| Pelican Wings | `ghcr.io/pelican-dev/wings:latest` | `/persist/containers/wings`, `/var/run/docker.sock` (ro), `/tmp/pterodactyl` |
 
 ---
 
@@ -226,6 +232,7 @@ All secrets encrypted with age keys in the `secrets/` directory. `.sops.yaml` de
 |-------------|----------|
 | `secrets/cloudflare-tunnel.yaml` | cloudflared tunnel token |
 | `secrets/vpn.yaml` | VPN provider WireGuard credentials |
+| `secrets/pelican.yaml` | Pelican Wings token ID + token |
 
 Secrets are decrypted at NixOS activation and made available to services via `config.sops.secrets.<name>.path`.
 
