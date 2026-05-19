@@ -40,7 +40,7 @@ nixos-homelab/
 │       ├── auth.nix
 │       ├── pelican.nix
 │       ├── monitoring.nix
-│       ├── containers.nix
+│       ├── containers.nix     # Romm oci-container
 │       └── gaming-vm.nix
 ├── secrets/
 │   ├── .sops.yaml
@@ -58,6 +58,7 @@ nixos-homelab/
 | `nixarr` | arr stack + VPN network namespace |
 | `authentik-nix` | Authentik NixOS module (community) |
 | `nix-pelican` | Pelican Panel + Wings NixOS modules (community) |
+| `copyparty` | Copyparty NixOS module (official upstream flake) |
 | `sops-nix` | Secrets decryption at activation |
 | `disko` | Declarative disk partitioning |
 | `nixos-impermanence` | Root wipe + persist bind-mounts |
@@ -105,7 +106,7 @@ Root (`/`) is rolled back to a blank btrfs snapshot on every boot via `nixos-imp
 | `/persist/var/lib/postgresql` | Authentik's PostgreSQL DB |
 | `/persist/var/lib/prometheus` | Prometheus TSDB |
 | `/persist/var/lib/grafana` | Grafana dashboards & config |
-| `/persist/containers/` | oci-container bind-mount volumes |
+| `/persist/containers/romm` | Romm oci-container data |
 | `/persist/var/lib/libvirt` | VM definitions |
 | `/persist/var/lib/pelican` | Pelican Panel state |
 | `/persist/var/lib/pelican-wings` | Wings root directory (server volumes, configs) |
@@ -125,6 +126,9 @@ VM disk image lives at `/data/vm/windows.qcow2` (too large for `/persist`).
 | cloudflared | `services.cloudflared` | Tunnel token from sops-nix |
 | Prometheus | `services.prometheus` | |
 | Grafana | `services.grafana` | |
+| Mealie | `services.mealie` | nixpkgs native |
+| Actual | `services.actual` | nixpkgs native |
+| Copyparty | `nixosModules.default` (upstream flake) | `github:9001/copyparty` |
 
 ### nixarr (community flake)
 
@@ -142,16 +146,11 @@ Both Pelican Panel and Wings run natively as systemd services via `services.peli
 
 ### oci-containers (`virtualisation.oci-containers`)
 
-Nix-declared Docker/Podman containers sharing a `homelab` bridge network.
+Nix-declared containers for services without native NixOS modules.
 
 | Service | Image | Data volume |
 |---------|-------|-------------|
-| Mealie | `ghcr.io/mealie-recipes/mealie` | `/persist/containers/mealie` |
 | Romm | `rommapp/romm` | `/persist/containers/romm` |
-| Actual | `actualbudget/actual-server` | `/persist/containers/actual` |
-| Copyparty | `copyparty/copyparty` | `/persist/containers/copyparty` |
-| Komodo | `ghcr.io/moghtech/komodo` | `/persist/containers/komodo` |
-| Dozzle | `amir20/dozzle` | — (read-only Docker socket) |
 
 ---
 
