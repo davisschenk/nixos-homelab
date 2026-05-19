@@ -40,8 +40,7 @@ nixos-homelab/
 │       ├── auth.nix
 │       ├── monitoring.nix
 │       ├── containers.nix
-│       ├── gaming-vm.nix
-│       └── pelican.nix
+│       └── gaming-vm.nix
 ├── secrets/
 │   ├── .sops.yaml
 │   ├── cloudflare-tunnel.yaml
@@ -145,8 +144,7 @@ Nix-declared Docker/Podman containers sharing a `homelab` bridge network.
 | Copyparty | `copyparty/copyparty` | `/persist/containers/copyparty` |
 | Komodo | `ghcr.io/moghtech/komodo` | `/persist/containers/komodo` |
 | Dozzle | `amir20/dozzle` | — (read-only Docker socket) |
-| Bar/dashboard | (current image) | `/persist/containers/bar` |
-| Pelican panel | (pelican image) | `/persist/containers/pelican` |
+| Pelican panel | `ghcr.io/pelican-dev/panel:latest` | `/persist/containers/pelican` |
 
 ---
 
