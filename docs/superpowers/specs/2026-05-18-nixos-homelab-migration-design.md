@@ -145,6 +145,7 @@ Nix-declared Docker/Podman containers sharing a `homelab` bridge network.
 | Komodo | `ghcr.io/moghtech/komodo` | `/persist/containers/komodo` |
 | Dozzle | `amir20/dozzle` | — (read-only Docker socket) |
 | Pelican panel | `ghcr.io/pelican-dev/panel:latest` | `/persist/containers/pelican` |
+| Pelican Wings | `ghcr.io/pelican-dev/wings:latest` | `/persist/containers/wings`, `/var/run/docker.sock` (ro), `/tmp/pterodactyl` |
 
 ---
 
