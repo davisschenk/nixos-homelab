@@ -76,14 +76,14 @@
     fi
 
     delete_subvolume_recursively() {
-      IFS=$'\n'
+      local IFS=$'\n'
       for i in $(btrfs subvolume list -o "$1" | cut -f 9- -d ' '); do
         delete_subvolume_recursively "/btrfs_tmp/$i"
       done
       btrfs subvolume delete "$1"
     }
 
-    for i in $(find /btrfs_tmp/old_roots/ -maxdepth 1 -mtime +30 2>/dev/null); do
+    for i in $(find /btrfs_tmp/old_roots/ -mindepth 1 -maxdepth 1 -mtime +30 2>/dev/null); do
       delete_subvolume_recursively "$i"
     done
 

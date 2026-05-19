@@ -7,9 +7,8 @@
 
   networking.hostName = "mangrove";
 
-  # dGPU PCI IDs — fill in after running `lspci -nn | grep -i nvidia` (or AMD equivalent)
-  # on first boot. Format: "XXXX:XXXX"
-  # boot.extraModprobeConfig = "options vfio-pci ids=<GPU-ID>,<AUDIO-ID>";
+  # AMD Radeon 540/550 (01:00.0) + Baffin HDMI audio (01:00.1) — passed to Windows VM
+  boot.extraModprobeConfig = "options vfio-pci ids=1002:699f,1002:aae0";
 
   system.stateVersion = "25.05";
 }
