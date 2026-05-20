@@ -12,7 +12,6 @@
 #   4. Re-enable wings.enable = true and redeploy.
 {
   config,
-  lib,
   ...
 }:
 {
@@ -45,6 +44,13 @@
     enableNginx = true;
   };
 
+  # Restrict nginx to loopback so Caddy can proxy panel.schenkenberger.dev → 127.0.0.1:8000
+  # without competing with Caddy on port 80.
+  services.nginx.defaultListenAddresses = [ "127.0.0.1" ];
+  services.nginx.virtualHosts."panel.schenkenberger.dev" = {
+    listen = [ { addr = "127.0.0.1"; port = 8000; ssl = false; } ];
+  };
+
   # ---------------------------------------------------------------------------
   # Wings (node daemon)
   # ---------------------------------------------------------------------------
@@ -63,14 +69,17 @@
     tokenIdFile = config.sops.secrets.pelican_token_id.path;
     tokenFile = config.sops.secrets.pelican_token.path;
 
-    # Bind Wings API on all interfaces; firewall rules are managed separately
+    # Bind Wings API to loopback — Panel is co-located on this host
     api = {
-      host = "0.0.0.0";
+      host = "127.0.0.1";
       port = 8080;
     };
 
-    openFirewall = true;
+    openFirewall = false; # manage ports explicitly below
   };
+
+  # SFTP for game server file management (Wings, not the system SSH)
+  networking.firewall.allowedTCPPorts = [ 2022 ];
 
   # ---------------------------------------------------------------------------
   # Additional sops secrets (panel-specific)
