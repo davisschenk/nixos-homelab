@@ -9,6 +9,7 @@
     content = ''
       AUTHENTIK_SECRET_KEY=${config.sops.placeholder."authentik_secret_key"}
     '';
+    restartUnits = [ "authentik.service" "authentik-worker.service" ];
   };
 
   services.authentik = {
