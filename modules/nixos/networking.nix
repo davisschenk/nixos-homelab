@@ -46,15 +46,5 @@
         }
       }
     '';
-
-    virtualHosts = {
-      # --- No auth ---
-      "panel.schenkenberger.dev" = {
-        listenAddresses = [ "127.0.0.1" ];
-        extraConfig = ''
-          reverse_proxy localhost:8000
-        '';
-      };
-    };
   };
 }

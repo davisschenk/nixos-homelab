@@ -99,8 +99,6 @@
     directories = [
       "/etc/ssh"
       "/etc/sops/age"
-      "/var/lib/pelican"
-      "/var/lib/pelican-wings"
       "/var/lib/libvirt"
     ];
     files = [
@@ -119,13 +117,5 @@
 
   sops.secrets."cloudflare_tunnel_token" = {
     sopsFile = ../../secrets/cloudflare-tunnel.yaml;
-  };
-
-  sops.secrets."pelican_token_id" = {
-    sopsFile = ../../secrets/pelican.yaml;
-  };
-
-  sops.secrets."pelican_token" = {
-    sopsFile = ../../secrets/pelican.yaml;
   };
 }
