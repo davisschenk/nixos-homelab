@@ -10,5 +10,6 @@
     ./containers.nix
     ./pelican.nix
     ./gaming-vm.nix
+    ./mealie.nix
   ];
 }
