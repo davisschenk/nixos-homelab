@@ -17,7 +17,6 @@
       EnvironmentFile = config.sops.secrets."cloudflare_tunnel_token".path;
       Restart = "on-failure";
       RestartSec = "5s";
-      DynamicUser = true;
     };
   };
 
@@ -28,6 +27,10 @@
   # ---------------------------------------------------------------------------
   services.caddy = {
     enable = true;
+
+    globalConfig = ''
+      auto_https off
+    '';
 
     # Snippet used by services that require Authentik SSO
     extraConfig = ''
