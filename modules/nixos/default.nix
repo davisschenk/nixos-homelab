@@ -6,7 +6,7 @@
     ./media.nix
     ./arr.nix
     ./monitoring.nix
-    ./apps.nix
+    ./copyparty.nix
     ./containers.nix
     ./pelican.nix
     ./gaming-vm.nix
