@@ -1,10 +1,10 @@
-{ ... }:
+{ config, ... }:
 {
   services.actual = {
     enable = true;
     settings = {
       hostname = "127.0.0.1";
-      port = 5006;
+      port = config.mylab.ports.actual;
     };
   };
 
@@ -12,7 +12,7 @@
     listenAddresses = [ "127.0.0.1" ];
     extraConfig = ''
       import authentik_forward_auth
-      reverse_proxy localhost:5006
+      reverse_proxy localhost:${toString config.mylab.ports.actual}
     '';
   };
 

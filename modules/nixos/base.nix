@@ -18,7 +18,7 @@
       "libvirtd"
       "docker"
     ];
-    # Replace with your actual SSH public key
+    # Replace with your actual SSH public key before deploying
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAA_REPLACE_WITH_YOUR_KEY davis@mangrove"
     ];
@@ -97,7 +97,8 @@
   environment.persistence."/persist" = {
     hideMounts = true;
     directories = [
-      "/etc/ssh"
+      # /etc/ssh is intentionally omitted: openssh hostKeys already writes
+      # directly to /persist/etc/ssh/... so no bind-mount is needed.
       "/etc/sops/age"
     ];
     files = [
@@ -109,8 +110,8 @@
   fileSystems."/persist".neededForBoot = true;
 
   # sops-nix secrets management with age encryption
+  # Each secret specifies its own sopsFile explicitly; no defaultSopsFile needed.
   sops = {
-    defaultSopsFile = ../../secrets/cloudflare-tunnel.yaml;
     age.keyFile = "/persist/etc/sops/age/keys.txt";
   };
 

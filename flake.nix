@@ -36,10 +36,6 @@
 
     impermanence.url = "github:nix-community/impermanence";
 
-    home-manager = {
-      url = "github:nix-community/home-manager";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs =
@@ -53,7 +49,6 @@
       authentik-nix,
       nix-pelican,
       copyparty,
-      home-manager,
       ...
     }@inputs:
     {
@@ -64,7 +59,7 @@
           disko.nixosModules.disko
           sops-nix.nixosModules.sops
           impermanence.nixosModules.impermanence
-          nixarr.nixosModules.nixarr
+          nixarr.nixosModules.default
           authentik-nix.nixosModules.default
           nix-pelican.nixosModules.default
           {

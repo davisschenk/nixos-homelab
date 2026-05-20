@@ -22,27 +22,46 @@
               size = "100%";
               content = {
                 type = "btrfs";
-                extraArgs = [ "-L" "root" "-f" ];
+                extraArgs = [
+                  "-L"
+                  "root"
+                  "-f"
+                ];
                 subvolumes = {
                   "@" = {
                     mountpoint = "/";
-                    mountOptions = [ "compress=zstd" "noatime" ];
+                    mountOptions = [
+                      "compress=zstd"
+                      "noatime"
+                    ];
                   };
                   "@nix" = {
                     mountpoint = "/nix";
-                    mountOptions = [ "compress=zstd" "noatime" ];
+                    mountOptions = [
+                      "compress=zstd"
+                      "noatime"
+                    ];
                   };
                   "@home" = {
                     mountpoint = "/home";
-                    mountOptions = [ "compress=zstd" ];
+                    mountOptions = [
+                      "compress=zstd"
+                      "noatime"
+                    ];
                   };
                   "@persist" = {
                     mountpoint = "/persist";
-                    mountOptions = [ "compress=zstd" ];
+                    mountOptions = [
+                      "compress=zstd"
+                      "noatime"
+                    ];
                   };
                   "@log" = {
                     mountpoint = "/var/log";
-                    mountOptions = [ "compress=zstd" "noatime" ];
+                    mountOptions = [
+                      "compress=zstd"
+                      "noatime"
+                    ];
                   };
                 };
               };
@@ -61,15 +80,25 @@
               size = "100%";
               content = {
                 type = "btrfs";
-                extraArgs = [ "-L" "data" "-f" ];
+                extraArgs = [
+                  "-L"
+                  "data"
+                  "-f"
+                ];
                 subvolumes = {
                   "@media" = {
                     mountpoint = "/data/media";
-                    mountOptions = [ "compress=zstd" "noatime" ];
+                    mountOptions = [
+                      "compress=zstd"
+                      "noatime"
+                    ];
                   };
                   "@downloads" = {
                     mountpoint = "/data/downloads";
-                    mountOptions = [ "compress=zstd" "noatime" ];
+                    mountOptions = [
+                      "compress=zstd"
+                      "noatime"
+                    ];
                   };
                   "@backups" = {
                     mountpoint = "/data/backups";
@@ -77,7 +106,10 @@
                   };
                   "@vm" = {
                     mountpoint = "/data/vm";
-                    mountOptions = [ "compress=zstd" "noatime" ];
+                    mountOptions = [
+                      "compress=zstd"
+                      "noatime"
+                    ];
                   };
                 };
               };

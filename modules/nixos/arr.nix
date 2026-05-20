@@ -7,7 +7,7 @@
   nixarr = {
     enable = true;
     mediaDir = "/data/media";
-    stateDir = "/persist/var/lib/nixarr";
+    stateDir = "/var/lib/nixarr";
 
     vpn = {
       enable = true;
@@ -30,7 +30,7 @@
     listenAddresses = [ "127.0.0.1" ];
     extraConfig = ''
       import authentik_forward_auth
-      reverse_proxy localhost:8989
+      reverse_proxy localhost:${toString config.mylab.ports.sonarr}
     '';
   };
 
@@ -38,7 +38,7 @@
     listenAddresses = [ "127.0.0.1" ];
     extraConfig = ''
       import authentik_forward_auth
-      reverse_proxy localhost:7878
+      reverse_proxy localhost:${toString config.mylab.ports.radarr}
     '';
   };
 
@@ -46,7 +46,7 @@
     listenAddresses = [ "127.0.0.1" ];
     extraConfig = ''
       import authentik_forward_auth
-      reverse_proxy localhost:9696
+      reverse_proxy localhost:${toString config.mylab.ports.prowlarr}
     '';
   };
 
@@ -54,7 +54,7 @@
     listenAddresses = [ "127.0.0.1" ];
     extraConfig = ''
       import authentik_forward_auth
-      reverse_proxy localhost:8080
+      reverse_proxy localhost:${toString config.mylab.ports.qbittorrent}
     '';
   };
 

@@ -1,4 +1,7 @@
 { config, ... }:
+let
+  p = config.mylab.ports;
+in
 {
   # Grafana secret key managed via SOPS. The file contains just the raw key
   # string (no YAML structure). Use Grafana's file provider so the key never
@@ -10,19 +13,25 @@
 
   services.prometheus = {
     enable = true;
-    port = 9090;
+    port = p.prometheus;
     retentionTime = "30d";
 
     scrapeConfigs = [
       {
-        job_name = "node";
-        static_configs = [{ targets = [ "localhost:9100" ]; }];
+        job_name = "prometheus";
+        static_configs = [ { targets = [ "localhost:${toString p.prometheus}" ]; } ];
       }
       {
-        job_name = "jellyfin";
-        static_configs = [{ targets = [ "localhost:8096" ]; }];
-        metrics_path = "/metrics";
+        job_name = "node";
+        static_configs = [ { targets = [ "localhost:${toString p.nodeExporter}" ]; } ];
       }
+      {
+        # authentik-nix worker exposes metrics on IPv6 loopback port 9301
+        job_name = "authentik";
+        static_configs = [ { targets = [ "[::1]:9301" ]; } ];
+      }
+      # Jellyfin does not expose Prometheus metrics without a separate plugin;
+      # removed to avoid scrape errors.
     ];
 
     exporters.node = {
@@ -45,8 +54,8 @@
     settings = {
       server = {
         http_addr = "127.0.0.1";
-        http_port = 3000;
-        root_url = "https://grafana.schenkenberger.dev";
+        http_port = p.grafana;
+        root_url = "https://grafana.schenkenberger.dev/";
       };
       analytics.reporting_enabled = false;
       security.secret_key = "$__file{${config.sops.secrets."grafana_secret_key".path}}";
@@ -58,7 +67,7 @@
         {
           name = "Prometheus";
           type = "prometheus";
-          url = "http://localhost:9090";
+          url = "http://localhost:${toString p.prometheus}";
           isDefault = true;
         }
       ];
@@ -69,7 +78,7 @@
     listenAddresses = [ "127.0.0.1" ];
     extraConfig = ''
       import authentik_forward_auth
-      reverse_proxy localhost:3000
+      reverse_proxy localhost:${toString p.grafana}
     '';
   };
 

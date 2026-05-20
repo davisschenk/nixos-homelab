@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ config, pkgs, ... }:
 {
   hardware.graphics = {
     enable = true;
@@ -21,7 +21,7 @@
   services.caddy.virtualHosts."jellyfin.schenkenberger.dev" = {
     listenAddresses = [ "127.0.0.1" ];
     extraConfig = ''
-      reverse_proxy localhost:8096
+      reverse_proxy localhost:${toString config.mylab.ports.jellyfin}
     '';
   };
 

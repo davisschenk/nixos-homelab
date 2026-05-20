@@ -8,7 +8,10 @@
     content = ''
       AUTHENTIK_SECRET_KEY=${config.sops.placeholder."authentik_secret_key"}
     '';
-    restartUnits = [ "authentik.service" "authentik-worker.service" ];
+    restartUnits = [
+      "authentik.service"
+      "authentik-worker.service"
+    ];
   };
 
   services.authentik = {
@@ -23,7 +26,7 @@
   services.caddy.virtualHosts."auth.schenkenberger.dev" = {
     listenAddresses = [ "127.0.0.1" ];
     extraConfig = ''
-      reverse_proxy localhost:9000
+      reverse_proxy localhost:${toString config.mylab.ports.authentik}
     '';
   };
 
