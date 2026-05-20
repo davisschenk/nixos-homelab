@@ -99,7 +99,6 @@
     directories = [
       "/etc/ssh"
       "/etc/sops/age"
-      "/var/lib/libvirt"
     ];
     files = [
       "/etc/machine-id"
