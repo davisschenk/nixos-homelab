@@ -49,13 +49,6 @@
 
     virtualHosts = {
       # --- No auth ---
-      "jellyfin.schenkenberger.dev" = {
-        listenAddresses = [ "127.0.0.1" ];
-        extraConfig = ''
-          reverse_proxy localhost:8096
-        '';
-      };
-
       "panel.schenkenberger.dev" = {
         listenAddresses = [ "127.0.0.1" ];
         extraConfig = ''

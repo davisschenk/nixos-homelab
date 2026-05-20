@@ -99,7 +99,6 @@
     directories = [
       "/etc/ssh"
       "/etc/sops/age"
-      "/var/lib/jellyfin"
       "/var/lib/prometheus2"
       "/var/lib/grafana"
       "/var/lib/pelican"
