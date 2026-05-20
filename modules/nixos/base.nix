@@ -108,7 +108,6 @@
       "/var/lib/pelican-wings"
       "/var/lib/libvirt"
       "/var/lib/nixarr"
-      "/containers/romm"
     ];
     files = [
       "/etc/machine-id"

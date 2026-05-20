@@ -79,14 +79,6 @@
         '';
       };
 
-      "romm.schenkenberger.dev" = {
-        listenAddresses = [ "127.0.0.1" ];
-        extraConfig = ''
-          import authentik_forward_auth
-          reverse_proxy localhost:8888
-        '';
-      };
-
       "sonarr.schenkenberger.dev" = {
         listenAddresses = [ "127.0.0.1" ];
         extraConfig = ''

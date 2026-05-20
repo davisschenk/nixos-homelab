@@ -7,7 +7,7 @@
     ./arr.nix
     ./monitoring.nix
     ./copyparty.nix
-    ./containers.nix
+    ./romm.nix
     ./pelican.nix
     ./gaming-vm.nix
     ./mealie.nix
