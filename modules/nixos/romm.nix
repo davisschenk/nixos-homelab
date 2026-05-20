@@ -31,7 +31,7 @@ in
     backend = "docker";
 
     containers.romm-db = {
-      image = "mariadb:10.11";
+      image = "mariadb:10.11.11";
       autoStart = true;
       volumes = [
         "/persist/containers/romm/db:/var/lib/mysql"
@@ -51,7 +51,7 @@ in
     };
 
     containers.romm = {
-      image = "rommapp/romm:latest";
+      image = "rommapp/romm:3.10.1";
       autoStart = true;
       dependsOn = [ "romm-db" ];
       ports = [ "127.0.0.1:${toString config.mylab.ports.romm}:8080" ];
@@ -69,7 +69,6 @@ in
         OIDC_PROVIDER = "authentik";
         OIDC_REDIRECT_URI = "https://romm.schenkenberger.dev/api/oauth2/openid/redirect";
         OIDC_SERVER_APPLICATION_URL = "https://auth.schenkenberger.dev";
-        ROMM_BASE_PATH = "/romm";
       };
     };
   };
@@ -97,7 +96,6 @@ in
   services.caddy.virtualHosts."romm.schenkenberger.dev" = {
     listenAddresses = [ "127.0.0.1" ];
     extraConfig = ''
-      import authentik_forward_auth
       reverse_proxy localhost:${toString config.mylab.ports.romm}
     '';
   };

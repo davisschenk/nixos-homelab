@@ -16,15 +16,31 @@
     extraGroups = [
       "wheel"
       "libvirtd"
-      "docker"
     ];
-    # Replace with your actual SSH public key before deploying
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAA_REPLACE_WITH_YOUR_KEY davis@mangrove"
     ];
   };
 
-  security.sudo.wheelNeedsPassword = false;
+  assertions = [
+    {
+      assertion = config.users.users.davis.openssh.authorizedKeys.keys != [ "ssh-ed25519 AAAA_REPLACE_WITH_YOUR_KEY davis@mangrove" ];
+      message = "Replace the placeholder SSH public key in base.nix before deploying.";
+    }
+  ];
+
+  security.sudo = {
+    wheelNeedsPassword = true;
+    extraRules = [
+      {
+        users = [ "davis" ];
+        commands = [
+          { command = "/run/current-system/sw/bin/nixos-rebuild"; options = [ "NOPASSWD" ]; }
+          { command = "/run/current-system/sw/bin/systemctl"; options = [ "NOPASSWD" ]; }
+        ];
+      }
+    ];
+  };
 
   services.openssh = {
     enable = true;
@@ -37,11 +53,6 @@
       {
         path = "/persist/etc/ssh/ssh_host_ed25519_key";
         type = "ed25519";
-      }
-      {
-        path = "/persist/etc/ssh/ssh_host_rsa_key";
-        type = "rsa";
-        bits = 4096;
       }
     ];
   };
@@ -96,11 +107,6 @@
   # Bind-mount persisted paths from /persist back into the live system
   environment.persistence."/persist" = {
     hideMounts = true;
-    directories = [
-      # /etc/ssh is intentionally omitted: openssh hostKeys already writes
-      # directly to /persist/etc/ssh/... so no bind-mount is needed.
-      "/etc/sops/age"
-    ];
     files = [
       "/etc/machine-id"
     ];
@@ -113,6 +119,19 @@
   # Each secret specifies its own sopsFile explicitly; no defaultSopsFile needed.
   sops = {
     age.keyFile = "/persist/etc/sops/age/keys.txt";
+  };
+
+  nix = {
+    settings.experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
+    gc = {
+      automatic = true;
+      dates = "weekly";
+      options = "--delete-older-than 30d";
+    };
+    optimise.automatic = true;
   };
 
 }

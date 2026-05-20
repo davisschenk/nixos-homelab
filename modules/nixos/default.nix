@@ -13,5 +13,6 @@
     ./gaming-vm.nix
     ./mealie.nix
     ./actual.nix
+    ./backup.nix
   ];
 }

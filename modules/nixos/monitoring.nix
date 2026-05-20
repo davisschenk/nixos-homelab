@@ -26,9 +26,8 @@ in
         static_configs = [ { targets = [ "localhost:${toString p.nodeExporter}" ]; } ];
       }
       {
-        # authentik-nix worker exposes metrics on IPv6 loopback port 9301
         job_name = "authentik";
-        static_configs = [ { targets = [ "[::1]:9301" ]; } ];
+        static_configs = [ { targets = [ "[::1]:9300" "[::1]:9301" ]; } ];
       }
       # Jellyfin does not expose Prometheus metrics without a separate plugin;
       # removed to avoid scrape errors.

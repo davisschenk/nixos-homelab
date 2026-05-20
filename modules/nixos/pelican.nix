@@ -51,9 +51,18 @@ in
     ];
   };
 
+  assertions = [
+    {
+      assertion =
+        !config.services.pelican.wings.enable
+        || config.services.pelican.wings.uuid != "00000000-0000-0000-0000-000000000000";
+      message = "Set services.pelican.wings.uuid to the real node UUID from Panel → Nodes → <node> → Configuration before enabling Wings.";
+    }
+  ];
+
   services.pelican.wings = {
     enable = false;
-    uuid = "00000000-0000-0000-0000-000000000000"; # Replace from Panel → Nodes → <node> → Configuration
+    uuid = "00000000-0000-0000-0000-000000000000";
     remote = "https://panel.schenkenberger.dev";
     tokenIdFile = config.sops.secrets.pelican_token_id.path;
     tokenFile = config.sops.secrets.pelican_token.path;

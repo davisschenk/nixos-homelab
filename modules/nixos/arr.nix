@@ -58,6 +58,10 @@
     '';
   };
 
+  systemd.services.sonarr.unitConfig.RequiresMountsFor = [ "/data/media" "/data/downloads" ];
+  systemd.services.radarr.unitConfig.RequiresMountsFor = [ "/data/media" "/data/downloads" ];
+  systemd.services.prowlarr.unitConfig.RequiresMountsFor = [ "/data/downloads" ];
+
   environment.persistence."/persist" = {
     directories = [ "/var/lib/nixarr" ];
   };
