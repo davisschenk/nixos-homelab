@@ -16,7 +16,7 @@
 
   # ---------------------------------------------------------------------------
   # Actual Budget — privacy-focused personal finance app
-  # Port 5006, state persisted under /persist/var/lib/actual
+  # Port 5006, state lives in /var/lib/actual (persisted via impermanence)
   # Caddy: actual.schenkenberger.dev → localhost:5006
   # ---------------------------------------------------------------------------
   services.actual = {
@@ -24,14 +24,17 @@
     settings = {
       hostname = "127.0.0.1";
       port = 5006;
-      dataDir = "/persist/var/lib/actual";
     };
   };
 
-  # Ensure the persistent data directory exists before the service starts
-  systemd.tmpfiles.rules = [
-    "d /persist/var/lib/actual 0700 actual actual -"
-  ];
+  # Persist state directories for services that use DynamicUser or need
+  # their /var/lib data to survive the btrfs root wipe on reboot.
+  environment.persistence."/persist" = {
+    directories = [
+      "/var/lib/actual"
+      "/var/lib/mealie"
+    ];
+  };
 
   # ---------------------------------------------------------------------------
   # Copyparty — web-based file manager / media share
