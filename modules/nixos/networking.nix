@@ -43,24 +43,28 @@
     virtualHosts = {
       # --- No auth ---
       "jellyfin.schenkenberger.dev" = {
+        listenAddresses = [ "127.0.0.1" ];
         extraConfig = ''
           reverse_proxy localhost:8096
         '';
       };
 
       "auth.schenkenberger.dev" = {
+        listenAddresses = [ "127.0.0.1" ];
         extraConfig = ''
           reverse_proxy localhost:9000
         '';
       };
 
       "files.schenkenberger.dev" = {
+        listenAddresses = [ "127.0.0.1" ];
         extraConfig = ''
           reverse_proxy localhost:3923
         '';
       };
 
       "panel.schenkenberger.dev" = {
+        listenAddresses = [ "127.0.0.1" ];
         extraConfig = ''
           reverse_proxy localhost:8000
         '';
@@ -68,6 +72,7 @@
 
       # --- Forward auth via Authentik ---
       "grafana.schenkenberger.dev" = {
+        listenAddresses = [ "127.0.0.1" ];
         extraConfig = ''
           import authentik_forward_auth
           reverse_proxy localhost:3000
@@ -75,6 +80,7 @@
       };
 
       "mealie.schenkenberger.dev" = {
+        listenAddresses = [ "127.0.0.1" ];
         extraConfig = ''
           import authentik_forward_auth
           reverse_proxy localhost:9925
@@ -82,6 +88,7 @@
       };
 
       "actual.schenkenberger.dev" = {
+        listenAddresses = [ "127.0.0.1" ];
         extraConfig = ''
           import authentik_forward_auth
           reverse_proxy localhost:5006
@@ -89,6 +96,7 @@
       };
 
       "romm.schenkenberger.dev" = {
+        listenAddresses = [ "127.0.0.1" ];
         extraConfig = ''
           import authentik_forward_auth
           reverse_proxy localhost:8888
@@ -96,6 +104,7 @@
       };
 
       "sonarr.schenkenberger.dev" = {
+        listenAddresses = [ "127.0.0.1" ];
         extraConfig = ''
           import authentik_forward_auth
           reverse_proxy localhost:8989
@@ -103,6 +112,7 @@
       };
 
       "radarr.schenkenberger.dev" = {
+        listenAddresses = [ "127.0.0.1" ];
         extraConfig = ''
           import authentik_forward_auth
           reverse_proxy localhost:7878
@@ -110,6 +120,7 @@
       };
 
       "prowlarr.schenkenberger.dev" = {
+        listenAddresses = [ "127.0.0.1" ];
         extraConfig = ''
           import authentik_forward_auth
           reverse_proxy localhost:9696
@@ -117,6 +128,7 @@
       };
 
       "qbit.schenkenberger.dev" = {
+        listenAddresses = [ "127.0.0.1" ];
         extraConfig = ''
           import authentik_forward_auth
           reverse_proxy localhost:8080
