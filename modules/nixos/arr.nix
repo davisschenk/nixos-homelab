@@ -1,5 +1,9 @@
 { config, ... }:
 {
+  sops.secrets."vpn_wg_conf" = {
+    sopsFile = ../../secrets/vpn.yaml;
+  };
+
   nixarr = {
     enable = true;
     mediaDir = "/data/media";
@@ -20,5 +24,41 @@
       vpn.enable = true;
       qui.enable = false;
     };
+  };
+
+  services.caddy.virtualHosts."sonarr.schenkenberger.dev" = {
+    listenAddresses = [ "127.0.0.1" ];
+    extraConfig = ''
+      import authentik_forward_auth
+      reverse_proxy localhost:8989
+    '';
+  };
+
+  services.caddy.virtualHosts."radarr.schenkenberger.dev" = {
+    listenAddresses = [ "127.0.0.1" ];
+    extraConfig = ''
+      import authentik_forward_auth
+      reverse_proxy localhost:7878
+    '';
+  };
+
+  services.caddy.virtualHosts."prowlarr.schenkenberger.dev" = {
+    listenAddresses = [ "127.0.0.1" ];
+    extraConfig = ''
+      import authentik_forward_auth
+      reverse_proxy localhost:9696
+    '';
+  };
+
+  services.caddy.virtualHosts."qbit.schenkenberger.dev" = {
+    listenAddresses = [ "127.0.0.1" ];
+    extraConfig = ''
+      import authentik_forward_auth
+      reverse_proxy localhost:8080
+    '';
+  };
+
+  environment.persistence."/persist" = {
+    directories = [ "/var/lib/nixarr" ];
   };
 }

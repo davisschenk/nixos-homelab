@@ -102,7 +102,6 @@
       "/var/lib/pelican"
       "/var/lib/pelican-wings"
       "/var/lib/libvirt"
-      "/var/lib/nixarr"
     ];
     files = [
       "/etc/machine-id"
@@ -120,10 +119,6 @@
 
   sops.secrets."cloudflare_tunnel_token" = {
     sopsFile = ../../secrets/cloudflare-tunnel.yaml;
-  };
-
-  sops.secrets."vpn_wg_conf" = {
-    sopsFile = ../../secrets/vpn.yaml;
   };
 
   sops.secrets."pelican_token_id" = {

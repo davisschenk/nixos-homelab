@@ -55,39 +55,6 @@
           reverse_proxy localhost:8000
         '';
       };
-
-      # --- Forward auth via Authentik ---
-      "sonarr.schenkenberger.dev" = {
-        listenAddresses = [ "127.0.0.1" ];
-        extraConfig = ''
-          import authentik_forward_auth
-          reverse_proxy localhost:8989
-        '';
-      };
-
-      "radarr.schenkenberger.dev" = {
-        listenAddresses = [ "127.0.0.1" ];
-        extraConfig = ''
-          import authentik_forward_auth
-          reverse_proxy localhost:7878
-        '';
-      };
-
-      "prowlarr.schenkenberger.dev" = {
-        listenAddresses = [ "127.0.0.1" ];
-        extraConfig = ''
-          import authentik_forward_auth
-          reverse_proxy localhost:9696
-        '';
-      };
-
-      "qbit.schenkenberger.dev" = {
-        listenAddresses = [ "127.0.0.1" ];
-        extraConfig = ''
-          import authentik_forward_auth
-          reverse_proxy localhost:8080
-        '';
-      };
     };
   };
 }
