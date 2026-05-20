@@ -24,7 +24,4 @@
   };
 
   programs.virt-manager.enable = true;
-
-  # Wings API port for Panel communication (SFTP port 2022 is already opened in pelican.nix)
-  networking.firewall.allowedTCPPorts = [ 8080 ];
 }
