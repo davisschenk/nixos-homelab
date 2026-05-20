@@ -64,6 +64,8 @@
   ];
 
   # Wipe / on each boot by deleting and recreating the @ btrfs subvolume
+  # postDeviceCommands is not supported with systemd initrd, so force it off
+  boot.initrd.systemd.enable = lib.mkForce false;
   boot.initrd.supportedFilesystems = [ "btrfs" ];
   boot.initrd.postDeviceCommands = lib.mkAfter ''
     mkdir -p /btrfs_tmp
