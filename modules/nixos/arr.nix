@@ -18,6 +18,7 @@
       enable = true;
       stateDir = "/data/downloads/.qbittorrent";
       vpn.enable = true;
+      qui.enable = false;
     };
   };
 }
