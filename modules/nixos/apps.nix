@@ -1,13 +1,5 @@
 { ... }:
 {
-  services.actual = {
-    enable = true;
-    settings = {
-      hostname = "127.0.0.1";
-      port = 5006;
-    };
-  };
-
   services.copyparty = {
     enable = true;
     settings = {
@@ -24,9 +16,5 @@
         flags = { };
       };
     };
-  };
-
-  environment.persistence."/persist" = {
-    directories = [ "/var/lib/actual" ];
   };
 }

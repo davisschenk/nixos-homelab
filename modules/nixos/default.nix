@@ -11,5 +11,6 @@
     ./pelican.nix
     ./gaming-vm.nix
     ./mealie.nix
+    ./actual.nix
   ];
 }
