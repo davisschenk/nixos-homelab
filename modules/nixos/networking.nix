@@ -7,6 +7,10 @@
   # ---------------------------------------------------------------------------
   # Cloudflare Tunnel — sole public ingress, no ports need to be opened
   # ---------------------------------------------------------------------------
+  sops.secrets."cloudflare_tunnel_token" = {
+    sopsFile = ../../secrets/cloudflare-tunnel.yaml;
+  };
+
   systemd.services.cloudflared = {
     description = "Cloudflare Tunnel";
     after = [ "network-online.target" ];

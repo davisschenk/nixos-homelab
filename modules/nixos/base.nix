@@ -114,7 +114,4 @@
     age.keyFile = "/persist/etc/sops/age/keys.txt";
   };
 
-  sops.secrets."cloudflare_tunnel_token" = {
-    sopsFile = ../../secrets/cloudflare-tunnel.yaml;
-  };
 }
