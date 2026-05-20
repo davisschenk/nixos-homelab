@@ -13,10 +13,14 @@
     wants = [ "network-online.target" ];
     wantedBy = [ "multi-user.target" ];
     serviceConfig = {
-      ExecStart = "${pkgs.cloudflared}/bin/cloudflared tunnel --no-autoupdate run --token \${CLOUDFLARE_TUNNEL_TOKEN}";
+      ExecStart = "${pkgs.cloudflared}/bin/cloudflared tunnel --no-autoupdate run --token $CLOUDFLARE_TUNNEL_TOKEN";
       EnvironmentFile = config.sops.secrets."cloudflare_tunnel_token".path;
       Restart = "on-failure";
       RestartSec = "5s";
+      NoNewPrivileges = true;
+      ProtectSystem = "strict";
+      PrivateTmp = true;
+      ProtectHome = true;
     };
   };
 
