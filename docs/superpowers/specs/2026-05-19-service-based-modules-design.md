@@ -102,6 +102,7 @@ All service-specific directories move to the module that owns the service:
 | `/var/lib/grafana` | `monitoring.nix` |
 | `/var/lib/pelican` | `pelican.nix` |
 | `/var/lib/pelican-wings` | `pelican.nix` |
+| `/var/lib/mysql` | `pelican.nix` (Pelican's MariaDB — nix-pelican hardcodes MariaDB, not PostgreSQL) |
 | `/var/lib/libvirt` | `gaming-vm.nix` |
 | `/var/lib/nixarr` | `arr.nix` |
 | `/containers/romm` | `romm.nix` |
