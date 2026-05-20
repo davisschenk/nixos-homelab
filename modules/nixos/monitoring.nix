@@ -64,4 +64,19 @@
       ];
     };
   };
+
+  services.caddy.virtualHosts."grafana.schenkenberger.dev" = {
+    listenAddresses = [ "127.0.0.1" ];
+    extraConfig = ''
+      import authentik_forward_auth
+      reverse_proxy localhost:3000
+    '';
+  };
+
+  environment.persistence."/persist" = {
+    directories = [
+      "/var/lib/prometheus2"
+      "/var/lib/grafana"
+    ];
+  };
 }
