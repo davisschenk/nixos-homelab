@@ -4,7 +4,6 @@
     sopsFile = ../../secrets/authentik.yaml;
   };
 
-  # Render the secret key into a systemd EnvironmentFile (KEY=VALUE format)
   sops.templates."authentik-env" = {
     content = ''
       AUTHENTIK_SECRET_KEY=${config.sops.placeholder."authentik_secret_key"}
@@ -19,5 +18,19 @@
       disable_startup_analytics = true;
       avatars = "initials";
     };
+  };
+
+  services.caddy.virtualHosts."auth.schenkenberger.dev" = {
+    listenAddresses = [ "127.0.0.1" ];
+    extraConfig = ''
+      reverse_proxy localhost:9000
+    '';
+  };
+
+  environment.persistence."/persist" = {
+    directories = [
+      "/var/lib/authentik"
+      "/var/lib/postgresql"
+    ];
   };
 }

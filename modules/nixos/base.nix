@@ -100,8 +100,6 @@
       "/etc/ssh"
       "/etc/sops/age"
       "/var/lib/jellyfin"
-      "/var/lib/authentik"
-      "/var/lib/postgresql"
       "/var/lib/prometheus2"
       "/var/lib/grafana"
       "/var/lib/pelican"
