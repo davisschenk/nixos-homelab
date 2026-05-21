@@ -54,6 +54,10 @@ show-keys:
 
 # ── NixOS ─────────────────────────────────────────────────────────────────────
 
+# Build the installer ISO for mangrove
+build-iso:
+    nix --extra-experimental-features 'nix-command flakes' build .#mangrove-iso
+
 # Check / evaluate the flake without building
 check:
     nix flake check

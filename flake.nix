@@ -51,9 +51,13 @@
       copyparty,
       ...
     }@inputs:
+    let
+      system = "x86_64-linux";
+      pkgs = nixpkgs.legacyPackages.${system};
+    in
     {
       nixosConfigurations.mangrove = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
+        inherit system;
         specialArgs = { inherit inputs; };
         modules = [
           disko.nixosModules.disko
@@ -73,5 +77,22 @@
           ./modules/nixos
         ];
       };
+
+      nixosConfigurations.mangrove-iso = nixpkgs.lib.nixosSystem {
+        inherit system;
+        specialArgs = { inherit inputs; };
+        modules = [
+          "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
+          disko.nixosModules.disko
+          {
+            environment.systemPackages = [ pkgs.git ];
+            isoImage.squashfsCompression = "zstd -Xcompression-level 6";
+            boot.zfs.forceImportRoot = false;
+          }
+        ];
+      };
+
+      packages.${system}.mangrove-iso =
+        self.nixosConfigurations.mangrove-iso.config.system.build.images.iso;
     };
 }
