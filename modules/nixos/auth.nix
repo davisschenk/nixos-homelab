@@ -4,9 +4,11 @@ let
   mailSopsFile = ../../secrets/mail.yaml;
 in
 {
-  sops.secrets."authentik_secret_key" = { inherit sopsFile; };
-  sops.secrets."mail_username" = { sopsFile = mailSopsFile; };
-  sops.secrets."mail_password" = { sopsFile = mailSopsFile; };
+  sops.secrets = {
+    "authentik_secret_key" = { inherit sopsFile; };
+    "mail_username" = { sopsFile = mailSopsFile; };
+    "mail_password" = { sopsFile = mailSopsFile; };
+  };
 
   sops.templates."authentik-env" = {
     content = ''
@@ -20,28 +22,30 @@ in
     ];
   };
 
-  services.authentik = {
-    enable = true;
-    environmentFile = config.sops.templates."authentik-env".path;
-    settings = {
-      disable_startup_analytics = true;
-      avatars = "initials";
-      email = {
-        host = "in-v3.mailjet.com";
-        port = 587;
-        use_tls = true;
-        use_ssl = false;
-        timeout = 10;
-        from = "authentik@schenkenberger.dev";
+  services = {
+    authentik = {
+      enable = true;
+      environmentFile = config.sops.templates."authentik-env".path;
+      settings = {
+        disable_startup_analytics = true;
+        avatars = "initials";
+        email = {
+          host = "in-v3.mailjet.com";
+          port = 587;
+          use_tls = true;
+          use_ssl = false;
+          timeout = 10;
+          from = "authentik@schenkenberger.dev";
+        };
       };
     };
-  };
 
-  services.caddy.virtualHosts."auth.schenkenberger.dev" = {
-    listenAddresses = [ "127.0.0.1" ];
-    extraConfig = ''
-      reverse_proxy localhost:${toString config.mylab.ports.authentik}
-    '';
+    caddy.virtualHosts."auth.schenkenberger.dev" = {
+      listenAddresses = [ "127.0.0.1" ];
+      extraConfig = ''
+        reverse_proxy localhost:${toString config.mylab.ports.authentik}
+      '';
+    };
   };
 
   environment.persistence."/persist" = {

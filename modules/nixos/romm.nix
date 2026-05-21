@@ -3,11 +3,13 @@ let
   sopsFile = ../../secrets/romm.yaml;
 in
 {
-  sops.secrets."romm_db_password" = { inherit sopsFile; };
-  sops.secrets."romm_auth_secret_key" = { inherit sopsFile; };
-  sops.secrets."romm_oidc_client_secret" = { inherit sopsFile; };
-  sops.secrets."romm_igdb_client_id" = { inherit sopsFile; };
-  sops.secrets."romm_igdb_client_secret" = { inherit sopsFile; };
+  sops.secrets = {
+    "romm_db_password" = { inherit sopsFile; };
+    "romm_auth_secret_key" = { inherit sopsFile; };
+    "romm_oidc_client_secret" = { inherit sopsFile; };
+    "romm_igdb_client_id" = { inherit sopsFile; };
+    "romm_igdb_client_secret" = { inherit sopsFile; };
+  };
 
   # Produce a KEY=value EnvironmentFile for the romm container with all secrets
   sops.templates."romm-env" = {
@@ -86,43 +88,47 @@ in
     };
   };
 
-  systemd.tmpfiles.rules = [
-    "d /persist/containers/romm/db     0750 root root -"
-    "d /persist/containers/romm/data   0750 root root -"
-    "d /persist/containers/romm/config 0750 root root -"
-    "d /data/media/roms                0755 root root -"
-  ];
+  systemd = {
+    tmpfiles.rules = [
+      "d /persist/containers/romm/db     0750 root root -"
+      "d /persist/containers/romm/data   0750 root root -"
+      "d /persist/containers/romm/config 0750 root root -"
+      "d /data/media/roms                0755 root root -"
+    ];
 
-  systemd.services.init-romm-network = {
-    description = "Create romm Docker network";
-    after = [ "docker.service" ];
-    requires = [ "docker.service" ];
-    wantedBy = [ "multi-user.target" ];
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
+    services = {
+      init-romm-network = {
+        description = "Create romm Docker network";
+        after = [ "docker.service" ];
+        requires = [ "docker.service" ];
+        wantedBy = [ "multi-user.target" ];
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+        };
+        script = ''
+          ${pkgs.docker}/bin/docker network inspect romm-net > /dev/null 2>&1 || \
+            ${pkgs.docker}/bin/docker network create romm-net
+        '';
+      };
+
+      "docker-romm" = {
+        after = [ "init-romm-network.service" ];
+        requires = [ "init-romm-network.service" ];
+        unitConfig.RequiresMountsFor = [
+          "/persist/containers/romm"
+          "/data/media/roms"
+        ];
+      };
+
+      "docker-romm-db" = {
+        after = [ "init-romm-network.service" ];
+        requires = [ "init-romm-network.service" ];
+        unitConfig.RequiresMountsFor = [
+          "/persist/containers/romm/db"
+        ];
+      };
     };
-    script = ''
-      ${pkgs.docker}/bin/docker network inspect romm-net > /dev/null 2>&1 || \
-        ${pkgs.docker}/bin/docker network create romm-net
-    '';
-  };
-
-  systemd.services."docker-romm" = {
-    after = [ "init-romm-network.service" ];
-    requires = [ "init-romm-network.service" ];
-    unitConfig.RequiresMountsFor = [
-      "/persist/containers/romm"
-      "/data/media/roms"
-    ];
-  };
-
-  systemd.services."docker-romm-db" = {
-    after = [ "init-romm-network.service" ];
-    requires = [ "init-romm-network.service" ];
-    unitConfig.RequiresMountsFor = [
-      "/persist/containers/romm/db"
-    ];
   };
 
   services.caddy.virtualHosts."romm.schenkenberger.dev" = {

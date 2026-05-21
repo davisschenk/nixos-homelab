@@ -14,29 +14,31 @@ let
   mailSopsFile = ../../secrets/mail.yaml;
 in
 {
-  sops.secrets.pelican_token_id = lib.mkIf config.services.pelican.wings.enable {
-    inherit sopsFile;
-    owner = config.services.pelican.wings.user;
-  };
-  sops.secrets.pelican_token = lib.mkIf config.services.pelican.wings.enable {
-    inherit sopsFile;
-    owner = config.services.pelican.wings.user;
-  };
-  sops.secrets.pelican_app_key = {
-    inherit sopsFile;
-    owner = config.services.pelican.panel.user;
-  };
-  sops.secrets.pelican_db_password = {
-    inherit sopsFile;
-    owner = config.services.pelican.panel.user;
-  };
-  sops.secrets."mail_username" = {
-    sopsFile = mailSopsFile;
-    owner = config.services.pelican.panel.user;
-  };
-  sops.secrets."mail_password" = {
-    sopsFile = mailSopsFile;
-    owner = config.services.pelican.panel.user;
+  sops.secrets = {
+    pelican_token_id = lib.mkIf config.services.pelican.wings.enable {
+      inherit sopsFile;
+      owner = config.services.pelican.wings.user;
+    };
+    pelican_token = lib.mkIf config.services.pelican.wings.enable {
+      inherit sopsFile;
+      owner = config.services.pelican.wings.user;
+    };
+    pelican_app_key = {
+      inherit sopsFile;
+      owner = config.services.pelican.panel.user;
+    };
+    pelican_db_password = {
+      inherit sopsFile;
+      owner = config.services.pelican.panel.user;
+    };
+    "mail_username" = {
+      sopsFile = mailSopsFile;
+      owner = config.services.pelican.panel.user;
+    };
+    "mail_password" = {
+      sopsFile = mailSopsFile;
+      owner = config.services.pelican.panel.user;
+    };
   };
 
   sops.templates."pelican-mail-env" = {
@@ -48,39 +50,63 @@ in
     restartUnits = [ "pelican-panel-setup.service" ];
   };
 
-  services.pelican.panel = {
-    enable = true;
-    app = {
-      url = "https://panel.schenkenberger.dev";
-      keyFile = config.sops.secrets.pelican_app_key.path;
-    };
-    database = {
-      createLocally = true;
-      passwordFile = config.sops.secrets.pelican_db_password.path;
-    };
-    redis = {
-      createLocally = true;
-    };
-    mail = {
-      host = "in-v3.mailjet.com";
-      port = 587;
-      encryption = "tls";
-      fromAddress = "pelican@schenkenberger.dev";
-      fromName = "Pelican";
-    };
-    extraEnvironmentFile = config.sops.templates."pelican-mail-env".path;
-    enableNginx = true;
-  };
+  services = {
+    pelican = {
+      panel = {
+        enable = true;
+        app = {
+          url = "https://panel.schenkenberger.dev";
+          keyFile = config.sops.secrets.pelican_app_key.path;
+        };
+        database = {
+          createLocally = true;
+          passwordFile = config.sops.secrets.pelican_db_password.path;
+        };
+        redis.createLocally = true;
+        mail = {
+          host = "in-v3.mailjet.com";
+          port = 587;
+          encryption = "tls";
+          fromAddress = "pelican@schenkenberger.dev";
+          fromName = "Pelican";
+        };
+        extraEnvironmentFile = config.sops.templates."pelican-mail-env".path;
+        enableNginx = true;
+      };
 
-  services.nginx.defaultListenAddresses = [ "127.0.0.1" ];
-  services.nginx.virtualHosts."panel.schenkenberger.dev" = {
-    listen = [
-      {
-        addr = "127.0.0.1";
-        port = config.mylab.ports.pelican;
-        ssl = false;
-      }
-    ];
+      wings = {
+        enable = false;
+        uuid = "00000000-0000-0000-0000-000000000000";
+        remote = "https://panel.schenkenberger.dev";
+        tokenIdFile = config.sops.secrets.pelican_token_id.path;
+        tokenFile = config.sops.secrets.pelican_token.path;
+        api = {
+          host = "127.0.0.1";
+          port = config.mylab.ports.wings;
+        };
+        openFirewall = false;
+      };
+    };
+
+    nginx = {
+      defaultListenAddresses = [ "127.0.0.1" ];
+      virtualHosts."panel.schenkenberger.dev" = {
+        listen = [
+          {
+            addr = "127.0.0.1";
+            port = config.mylab.ports.pelican;
+            ssl = false;
+          }
+        ];
+      };
+    };
+
+    caddy.virtualHosts."panel.schenkenberger.dev" = {
+      listenAddresses = [ "127.0.0.1" ];
+      extraConfig = ''
+        reverse_proxy localhost:${toString config.mylab.ports.pelican}
+      '';
+    };
   };
 
   assertions = [
@@ -92,28 +118,8 @@ in
     }
   ];
 
-  services.pelican.wings = {
-    enable = false;
-    uuid = "00000000-0000-0000-0000-000000000000";
-    remote = "https://panel.schenkenberger.dev";
-    tokenIdFile = config.sops.secrets.pelican_token_id.path;
-    tokenFile = config.sops.secrets.pelican_token.path;
-    api = {
-      host = "127.0.0.1";
-      port = config.mylab.ports.wings;
-    };
-    openFirewall = false;
-  };
-
   # Only open Wings SFTP port (2022) when Wings is actually enabled
   networking.firewall.allowedTCPPorts = lib.mkIf config.services.pelican.wings.enable [ 2022 ];
-
-  services.caddy.virtualHosts."panel.schenkenberger.dev" = {
-    listenAddresses = [ "127.0.0.1" ];
-    extraConfig = ''
-      reverse_proxy localhost:${toString config.mylab.ports.pelican}
-    '';
-  };
 
   environment.persistence."/persist" = {
     directories = [
