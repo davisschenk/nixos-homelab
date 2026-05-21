@@ -97,6 +97,19 @@
               documentation.man.enable = pkgs.lib.mkOverride 500 true;
               documentation.doc.enable = pkgs.lib.mkOverride 500 true;
               fonts.fontconfig.enable = pkgs.lib.mkOverride 500 false;
+              environment.systemPackages = [
+                (pkgs.writeShellScriptBin "install-mangrove" ''
+                  set -euo pipefail
+                  echo "==> Installing mangrove from github:davisschenk/nixos-homelab#mangrove"
+                  echo "==> This will ERASE /dev/nvme0n1 and /dev/sda. Ctrl-C to abort."
+                  read -rp "Press Enter to continue..."
+                  sudo disko-install \
+                    --flake "github:davisschenk/nixos-homelab#mangrove" \
+                    --disk nvme /dev/nvme0n1 \
+                    --disk hdd /dev/sda
+                  echo "==> Done. You may now reboot."
+                '')
+              ];
             };
           }
         ];
