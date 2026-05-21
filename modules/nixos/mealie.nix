@@ -1,20 +1,21 @@
 { config, ... }:
 let
   sopsFile = ../../secrets/mealie.yaml;
+  mailSopsFile = ../../secrets/mail.yaml;
 in
 {
   sops.secrets."mealie_oidc_client_secret" = { inherit sopsFile; };
-  sops.secrets."mealie_smtp_user" = { inherit sopsFile; };
-  sops.secrets."mealie_smtp_password" = { inherit sopsFile; };
   sops.secrets."mealie_openai_api_key" = { inherit sopsFile; };
+  sops.secrets."mail_username" = { sopsFile = mailSopsFile; };
+  sops.secrets."mail_password" = { sopsFile = mailSopsFile; };
 
   # credentialsFile must be KEY=value format (systemd EnvironmentFile);
   # sops.templates interpolates secrets into the file at activation time.
   sops.templates."mealie-credentials" = {
     content = ''
       OIDC_CLIENT_SECRET=${config.sops.placeholder."mealie_oidc_client_secret"}
-      SMTP_USER=${config.sops.placeholder."mealie_smtp_user"}
-      SMTP_PASSWORD=${config.sops.placeholder."mealie_smtp_password"}
+      SMTP_USER=${config.sops.placeholder."mail_username"}
+      SMTP_PASSWORD=${config.sops.placeholder."mail_password"}
       OPENAI_API_KEY=${config.sops.placeholder."mealie_openai_api_key"}
     '';
     # mealie uses DynamicUser; mode 0440 + root ownership is fine since
@@ -37,14 +38,15 @@ in
       OIDC_CONFIGURATION_URL = "https://auth.schenkenberger.dev/application/o/mealie/.well-known/openid-configuration";
       OIDC_CLIENT_ID = "mealie";
       OIDC_SIGNUP_ENABLED = "true";
-      OIDC_USER_GROUP = "mealie_user";
-      OIDC_ADMIN_GROUP = "mealie_admin";
-      OIDC_AUTO_REDIRECT = "false";
+      OIDC_USER_GROUP = "mealie-user";
+      OIDC_ADMIN_GROUP = "mealie-admin";
+      OIDC_AUTO_REDIRECT = "true";
       OIDC_REMEMBER_ME = "true";
       # SMTP — user (API key) and password (secret key) are in credentialsFile
       SMTP_HOST = "in-v3.mailjet.com";
       SMTP_PORT = "587";
-      SMTP_FROM_EMAIL = "homelab@schenkenberger.dev";
+      SMTP_FROM_EMAIL = "mealie@schenkenberger.dev";
+      BASE_URL = "https://mealie.schenkenberger.dev";
       SMTP_AUTH_STRATEGY = "STARTTLS";
       # OpenAI
       OPENAI_ENABLE = "true";

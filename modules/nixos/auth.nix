@@ -1,12 +1,18 @@
 { config, ... }:
+let
+  sopsFile = ../../secrets/authentik.yaml;
+  mailSopsFile = ../../secrets/mail.yaml;
+in
 {
-  sops.secrets."authentik_secret_key" = {
-    sopsFile = ../../secrets/authentik.yaml;
-  };
+  sops.secrets."authentik_secret_key" = { inherit sopsFile; };
+  sops.secrets."mail_username" = { sopsFile = mailSopsFile; };
+  sops.secrets."mail_password" = { sopsFile = mailSopsFile; };
 
   sops.templates."authentik-env" = {
     content = ''
       AUTHENTIK_SECRET_KEY=${config.sops.placeholder."authentik_secret_key"}
+      AUTHENTIK_EMAIL__USERNAME=${config.sops.placeholder."mail_username"}
+      AUTHENTIK_EMAIL__PASSWORD=${config.sops.placeholder."mail_password"}
     '';
     restartUnits = [
       "authentik.service"
@@ -20,6 +26,14 @@
     settings = {
       disable_startup_analytics = true;
       avatars = "initials";
+      email = {
+        host = "in-v3.mailjet.com";
+        port = 587;
+        use_tls = true;
+        use_ssl = false;
+        timeout = 10;
+        from = "authentik@schenkenberger.dev";
+      };
     };
   };
 

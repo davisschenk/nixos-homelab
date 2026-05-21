@@ -11,6 +11,7 @@
 }:
 let
   sopsFile = ../../secrets/pelican.yaml;
+  mailSopsFile = ../../secrets/mail.yaml;
 in
 {
   sops.secrets.pelican_token_id = lib.mkIf config.services.pelican.wings.enable {
@@ -29,6 +30,23 @@ in
     inherit sopsFile;
     owner = config.services.pelican.panel.user;
   };
+  sops.secrets."mail_username" = {
+    sopsFile = mailSopsFile;
+    owner = config.services.pelican.panel.user;
+  };
+  sops.secrets."mail_password" = {
+    sopsFile = mailSopsFile;
+    owner = config.services.pelican.panel.user;
+  };
+
+  sops.templates."pelican-mail-env" = {
+    content = ''
+      MAIL_USERNAME=${config.sops.placeholder."mail_username"}
+      MAIL_PASSWORD=${config.sops.placeholder."mail_password"}
+    '';
+    owner = config.services.pelican.panel.user;
+    restartUnits = [ "pelican-panel-setup.service" ];
+  };
 
   services.pelican.panel = {
     enable = true;
@@ -43,6 +61,14 @@ in
     redis = {
       createLocally = true;
     };
+    mail = {
+      host = "in-v3.mailjet.com";
+      port = 587;
+      encryption = "tls";
+      fromAddress = "pelican@schenkenberger.dev";
+      fromName = "Pelican";
+    };
+    extraEnvironmentFile = config.sops.templates."pelican-mail-env".path;
     enableNginx = true;
   };
 
