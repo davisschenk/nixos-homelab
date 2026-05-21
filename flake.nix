@@ -82,17 +82,26 @@
         inherit system;
         specialArgs = { inherit inputs; };
         modules = [
-          "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
           disko.nixosModules.disko
           {
             environment.systemPackages = [ pkgs.git ];
-            isoImage.squashfsCompression = "zstd -Xcompression-level 6";
             boot.zfs.forceImportRoot = false;
+            image.modules."iso-installer" = {
+              imports = [
+                "${nixpkgs}/nixos/modules/profiles/minimal.nix"
+                "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-base.nix"
+              ];
+              isoImage.squashfsCompression = "zstd -Xcompression-level 6";
+              isoImage.edition = pkgs.lib.mkOverride 500 "minimal";
+              documentation.man.enable = pkgs.lib.mkOverride 500 true;
+              documentation.doc.enable = pkgs.lib.mkOverride 500 true;
+              fonts.fontconfig.enable = pkgs.lib.mkOverride 500 false;
+            };
           }
         ];
       };
 
       packages.${system}.mangrove-iso =
-        self.nixosConfigurations.mangrove-iso.config.system.build.images.iso;
+        self.nixosConfigurations.mangrove-iso.config.system.build.images."iso-installer";
     };
 }
