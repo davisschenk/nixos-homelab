@@ -1,5 +1,5 @@
 keys:
-  - &admin age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p  # admin workstation key: replace with real value (age-keygen -o ~/.config/sops/age/keys.txt)
+  - &admin age19aesmaqmck97rh3hgswmwas4uflmd4kfx47v5gg57yj58jswccuq0x0vyg
 
   # HOST KEY — required for the host to decrypt secrets at boot.
   # After first boot, run:
