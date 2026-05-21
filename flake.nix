@@ -93,7 +93,7 @@
               ];
               isoImage.squashfsCompression = "zstd -Xcompression-level 6";
               isoImage.edition = pkgs.lib.mkOverride 500 "minimal";
-              isoImage.isoName = pkgs.lib.mkForce "mangrove-installer.iso";
+              image.fileName = pkgs.lib.mkForce "mangrove-installer.iso";
               documentation.man.enable = pkgs.lib.mkOverride 500 true;
               documentation.doc.enable = pkgs.lib.mkOverride 500 true;
               fonts.fontconfig.enable = pkgs.lib.mkOverride 500 false;
