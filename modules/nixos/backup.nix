@@ -5,7 +5,6 @@ let
     initialize = true;
     repositoryFile = config.sops.secrets."restic_repository".path;
     passwordFile = config.sops.secrets."restic_password".path;
-    environmentFile = config.sops.secrets."restic_environment".path;
     pruneOpts = [
       "--keep-daily 7"
       "--keep-weekly 8"
@@ -17,7 +16,6 @@ in
 {
   sops.secrets."restic_repository" = { inherit sopsFile; };
   sops.secrets."restic_password" = { inherit sopsFile; };
-  sops.secrets."restic_environment" = { inherit sopsFile; };
 
   services.restic.backups = {
     persist = commonSettings // {
