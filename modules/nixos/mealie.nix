@@ -4,6 +4,7 @@ let
 in
 {
   sops.secrets."mealie_oidc_client_secret" = { inherit sopsFile; };
+  sops.secrets."mealie_smtp_user" = { inherit sopsFile; };
   sops.secrets."mealie_smtp_password" = { inherit sopsFile; };
   sops.secrets."mealie_openai_api_key" = { inherit sopsFile; };
 
@@ -12,6 +13,7 @@ in
   sops.templates."mealie-credentials" = {
     content = ''
       OIDC_CLIENT_SECRET=${config.sops.placeholder."mealie_oidc_client_secret"}
+      SMTP_USER=${config.sops.placeholder."mealie_smtp_user"}
       SMTP_PASSWORD=${config.sops.placeholder."mealie_smtp_password"}
       OPENAI_API_KEY=${config.sops.placeholder."mealie_openai_api_key"}
     '';
@@ -39,12 +41,11 @@ in
       OIDC_ADMIN_GROUP = "mealie_admin";
       OIDC_AUTO_REDIRECT = "false";
       OIDC_REMEMBER_ME = "true";
-      # SMTP
-      SMTP_HOST = "smtp.gmail.com";
+      # SMTP — user (API key) and password (secret key) are in credentialsFile
+      SMTP_HOST = "in-v3.mailjet.com";
       SMTP_PORT = "587";
       SMTP_FROM_EMAIL = "homelab@schenkenberger.dev";
-      SMTP_AUTH_STRATEGY = "TLS";
-      SMTP_USER = "homelab@schenkenberger.dev";
+      SMTP_AUTH_STRATEGY = "STARTTLS";
       # OpenAI
       OPENAI_ENABLE = "true";
     };
@@ -60,7 +61,7 @@ in
   environment.persistence."/persist" = {
     directories = [
       "/var/lib/mealie"
-      # /var/lib/postgresql is persisted by auth.nix (shared PostgreSQL instance)
+      # /var/lib/postgresql is persisted by base.nix (shared PostgreSQL instance)
     ];
   };
 }

@@ -25,6 +25,8 @@
 
   programs.virt-manager.enable = true;
 
+  systemd.services.libvirtd.unitConfig.RequiresMountsFor = [ "/data/vm" ];
+
   environment.persistence."/persist" = {
     directories = [ "/var/lib/libvirt" ];
   };

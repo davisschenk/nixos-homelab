@@ -25,4 +25,10 @@
       reverse_proxy localhost:${toString config.mylab.ports.copyparty}
     '';
   };
+
+  systemd.services.copyparty.unitConfig.RequiresMountsFor = [ "/data/media" ];
+
+  environment.persistence."/persist" = {
+    directories = [ "/var/lib/copyparty" ];
+  };
 }

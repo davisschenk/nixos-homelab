@@ -24,7 +24,7 @@
 
   assertions = [
     {
-      assertion = config.users.users.davis.openssh.authorizedKeys.keys != [ "ssh-ed25519 AAAA_REPLACE_WITH_YOUR_KEY davis@mangrove" ];
+      assertion = !builtins.elem "ssh-ed25519 AAAA_REPLACE_WITH_YOUR_KEY davis@mangrove" config.users.users.davis.openssh.authorizedKeys.keys;
       message = "Replace the placeholder SSH public key in base.nix before deploying.";
     }
   ];
@@ -110,6 +110,9 @@
     files = [
       "/etc/machine-id"
     ];
+    directories = [
+      "/var/lib/postgresql"
+    ];
   };
 
   # /persist itself must survive — it's on @persist subvolume, not wiped
@@ -122,10 +125,16 @@
   };
 
   nix = {
-    settings.experimental-features = [
-      "nix-command"
-      "flakes"
-    ];
+    settings = {
+      experimental-features = [
+        "nix-command"
+        "flakes"
+      ];
+      trusted-users = [
+        "root"
+        "@wheel"
+      ];
+    };
     gc = {
       automatic = true;
       dates = "weekly";

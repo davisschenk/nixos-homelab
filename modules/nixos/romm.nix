@@ -1,4 +1,4 @@
-{ config, ... }:
+{ config, pkgs, ... }:
 let
   sopsFile = ../../secrets/romm.yaml;
 in
@@ -25,7 +25,16 @@ in
     ];
   };
 
-  virtualisation.docker.enable = true;
+  virtualisation.docker = {
+    enable = true;
+    daemon.settings = {
+      log-driver = "json-file";
+      log-opts = {
+        max-size = "10m";
+        max-file = "3";
+      };
+    };
+  };
 
   virtualisation.oci-containers = {
     backend = "docker";
@@ -43,6 +52,7 @@ in
         MARIADB_RANDOM_ROOT_PASSWORD = "yes";
       };
       extraOptions = [
+        "--network=romm-net"
         "--health-cmd=healthcheck.sh --connect --innodb_initialized"
         "--health-interval=10s"
         "--health-timeout=5s"
@@ -54,6 +64,7 @@ in
       image = "rommapp/romm:3.10.1";
       autoStart = true;
       dependsOn = [ "romm-db" ];
+      extraOptions = [ "--network=romm-net" ];
       ports = [ "127.0.0.1:${toString config.mylab.ports.romm}:8080" ];
       volumes = [
         "/persist/containers/romm/data:/romm/data"
@@ -80,7 +91,24 @@ in
     "d /data/media/roms                0755 root root -"
   ];
 
+  systemd.services.init-romm-network = {
+    description = "Create romm Docker network";
+    after = [ "docker.service" ];
+    requires = [ "docker.service" ];
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+    };
+    script = ''
+      ${pkgs.docker}/bin/docker network inspect romm-net > /dev/null 2>&1 || \
+        ${pkgs.docker}/bin/docker network create romm-net
+    '';
+  };
+
   systemd.services."docker-romm" = {
+    after = [ "init-romm-network.service" ];
+    requires = [ "init-romm-network.service" ];
     unitConfig.RequiresMountsFor = [
       "/persist/containers/romm"
       "/data/media/roms"
@@ -88,6 +116,8 @@ in
   };
 
   systemd.services."docker-romm-db" = {
+    after = [ "init-romm-network.service" ];
+    requires = [ "init-romm-network.service" ];
     unitConfig.RequiresMountsFor = [
       "/persist/containers/romm/db"
     ];
@@ -100,6 +130,10 @@ in
     '';
   };
 
-  # Volumes bind directly to /persist which lives on the @persist btrfs
-  # subvolume (never wiped); no impermanence bind-mount needed.
+  # romm container volumes bind directly to /persist (never wiped); no
+  # impermanence bind-mount needed for those paths.
+  # /var/lib/docker is persisted so images survive reboots without re-pulling.
+  environment.persistence."/persist" = {
+    directories = [ "/var/lib/docker" ];
+  };
 }

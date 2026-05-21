@@ -33,7 +33,6 @@
   environment.persistence."/persist" = {
     directories = [
       "/var/lib/authentik"
-      "/var/lib/postgresql"
     ];
   };
 }

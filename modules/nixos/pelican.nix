@@ -13,8 +13,14 @@ let
   sopsFile = ../../secrets/pelican.yaml;
 in
 {
-  sops.secrets.pelican_token_id = { inherit sopsFile; };
-  sops.secrets.pelican_token = { inherit sopsFile; };
+  sops.secrets.pelican_token_id = lib.mkIf config.services.pelican.wings.enable {
+    inherit sopsFile;
+    owner = config.services.pelican.wings.user;
+  };
+  sops.secrets.pelican_token = lib.mkIf config.services.pelican.wings.enable {
+    inherit sopsFile;
+    owner = config.services.pelican.wings.user;
+  };
   sops.secrets.pelican_app_key = {
     inherit sopsFile;
     owner = config.services.pelican.panel.user;
