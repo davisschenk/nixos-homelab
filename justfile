@@ -116,6 +116,18 @@ update-input input:
 show:
     nix flake show
 
+# ── Linting ──────────────────────────────────────────────────────────────────
+
+# Run statix + deadnix linters (check only, no changes)
+lint:
+    nix --extra-experimental-features 'nix-command flakes' run nixpkgs#statix -- check .
+    nix --extra-experimental-features 'nix-command flakes' run nixpkgs#deadnix -- .
+
+# Run statix + deadnix and auto-fix issues
+lint-fix:
+    nix --extra-experimental-features 'nix-command flakes' run nixpkgs#statix -- fix .
+    nix --extra-experimental-features 'nix-command flakes' run nixpkgs#deadnix -- --edit .
+
 # ── Formatting ───────────────────────────────────────────────────────────────
 
 # Format all .nix files with nixfmt
