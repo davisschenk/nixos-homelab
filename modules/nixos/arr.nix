@@ -23,6 +23,7 @@
       stateDir = "/data/downloads/.qbittorrent";
       vpn.enable = true;
       qui.enable = false;
+      webuiPort = config.mylab.ports.qbittorrent;
     };
   };
 

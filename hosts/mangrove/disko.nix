@@ -102,7 +102,10 @@
                   };
                   "@backups" = {
                     mountpoint = "/data/backups";
-                    mountOptions = [ "compress=zstd" ];
+                    mountOptions = [
+                      "compress=zstd"
+                      "noatime"
+                    ];
                   };
                   "@vm" = {
                     mountpoint = "/data/vm";

@@ -66,6 +66,13 @@ in
     };
   };
 
+  # Ensure the persist job (03:00) always runs after the db dump jobs (02:00/02:30)
+  # even when Persistent=true causes catch-up runs after a missed boot.
+  systemd.services."restic-backups-persist".after = [
+    "restic-backups-postgresql.service"
+    "restic-backups-mysql.service"
+  ];
+
   # Create backup staging dirs on /persist before impermanence bind-mounts them,
   # so the directories exist on first boot when the dump jobs run.
   systemd.tmpfiles.rules = [

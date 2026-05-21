@@ -57,6 +57,7 @@ in
         "--health-interval=10s"
         "--health-timeout=5s"
         "--health-retries=5"
+        "--health-start-period=30s"
       ];
     };
 
@@ -78,8 +79,9 @@ in
         DB_USER = "romm-user";
         OIDC_ENABLED = "true";
         OIDC_PROVIDER = "authentik";
-        OIDC_REDIRECT_URI = "https://romm.schenkenberger.dev/api/oauth2/openid/redirect";
-        OIDC_SERVER_APPLICATION_URL = "https://auth.schenkenberger.dev";
+        OIDC_CLIENT_ID = "romm";
+        OIDC_REDIRECT_URI = "https://romm.schenkenberger.dev/api/oauth/openid";
+        OIDC_SERVER_APPLICATION_URL = "https://auth.schenkenberger.dev/application/o/romm";
       };
     };
   };

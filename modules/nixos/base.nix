@@ -21,13 +21,6 @@
     ];
   };
 
-  assertions = [
-    {
-      assertion = !builtins.elem "ssh-ed25519 AAAA_REPLACE_WITH_YOUR_KEY davis@mangrove" config.users.users.davis.openssh.authorizedKeys.keys;
-      message = "Replace the placeholder SSH public key in base.nix before deploying.";
-    }
-  ];
-
   security.sudo = {
     wheelNeedsPassword = true;
     extraRules = [
