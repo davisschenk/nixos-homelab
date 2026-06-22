@@ -79,11 +79,123 @@ let
           policy_engine_mode: any
   '';
 
+  forwardAuthBlueprint = pkgs.writeText "forward-auth.yaml" ''
+    version: 1
+    metadata:
+      name: "Forward Auth Services"
+      labels:
+        blueprints.goauthentik.io/instantiate: "true"
+    entries:
+      - model: authentik_providers_proxy.proxyprovider
+        state: present
+        identifiers:
+          name: "Grafana Provider"
+        attrs:
+          authorization_flow: !find [authentik_flows.flow, {slug: "default-provider-authorization-implicit-consent"}]
+          external_host: "https://grafana.schenkenberger.dev"
+          mode: forward_single
+          cookie_domain: "schenkenberger.dev"
+      - model: authentik_core.application
+        state: present
+        identifiers:
+          slug: "grafana"
+        attrs:
+          name: "Grafana"
+          slug: "grafana"
+          provider: !find [authentik_providers_proxy.proxyprovider, {name: "Grafana Provider"}]
+          policy_engine_mode: any
+      - model: authentik_providers_proxy.proxyprovider
+        state: present
+        identifiers:
+          name: "Sonarr Provider"
+        attrs:
+          authorization_flow: !find [authentik_flows.flow, {slug: "default-provider-authorization-implicit-consent"}]
+          external_host: "https://sonarr.schenkenberger.dev"
+          mode: forward_single
+          cookie_domain: "schenkenberger.dev"
+      - model: authentik_core.application
+        state: present
+        identifiers:
+          slug: "sonarr"
+        attrs:
+          name: "Sonarr"
+          slug: "sonarr"
+          provider: !find [authentik_providers_proxy.proxyprovider, {name: "Sonarr Provider"}]
+          policy_engine_mode: any
+      - model: authentik_providers_proxy.proxyprovider
+        state: present
+        identifiers:
+          name: "Radarr Provider"
+        attrs:
+          authorization_flow: !find [authentik_flows.flow, {slug: "default-provider-authorization-implicit-consent"}]
+          external_host: "https://radarr.schenkenberger.dev"
+          mode: forward_single
+          cookie_domain: "schenkenberger.dev"
+      - model: authentik_core.application
+        state: present
+        identifiers:
+          slug: "radarr"
+        attrs:
+          name: "Radarr"
+          slug: "radarr"
+          provider: !find [authentik_providers_proxy.proxyprovider, {name: "Radarr Provider"}]
+          policy_engine_mode: any
+      - model: authentik_providers_proxy.proxyprovider
+        state: present
+        identifiers:
+          name: "Prowlarr Provider"
+        attrs:
+          authorization_flow: !find [authentik_flows.flow, {slug: "default-provider-authorization-implicit-consent"}]
+          external_host: "https://prowlarr.schenkenberger.dev"
+          mode: forward_single
+          cookie_domain: "schenkenberger.dev"
+      - model: authentik_core.application
+        state: present
+        identifiers:
+          slug: "prowlarr"
+        attrs:
+          name: "Prowlarr"
+          slug: "prowlarr"
+          provider: !find [authentik_providers_proxy.proxyprovider, {name: "Prowlarr Provider"}]
+          policy_engine_mode: any
+      - model: authentik_providers_proxy.proxyprovider
+        state: present
+        identifiers:
+          name: "qBittorrent Provider"
+        attrs:
+          authorization_flow: !find [authentik_flows.flow, {slug: "default-provider-authorization-implicit-consent"}]
+          external_host: "https://qbit.schenkenberger.dev"
+          mode: forward_single
+          cookie_domain: "schenkenberger.dev"
+      - model: authentik_core.application
+        state: present
+        identifiers:
+          slug: "qbittorrent"
+        attrs:
+          name: "qBittorrent"
+          slug: "qbittorrent"
+          provider: !find [authentik_providers_proxy.proxyprovider, {name: "qBittorrent Provider"}]
+          policy_engine_mode: any
+      - model: authentik_outposts.outpost
+        state: present
+        identifiers:
+          name: "authentik Embedded Outpost"
+        attrs:
+          providers:
+            - !find [authentik_providers_proxy.proxyprovider, {name: "Grafana Provider"}]
+            - !find [authentik_providers_proxy.proxyprovider, {name: "Sonarr Provider"}]
+            - !find [authentik_providers_proxy.proxyprovider, {name: "Radarr Provider"}]
+            - !find [authentik_providers_proxy.proxyprovider, {name: "Prowlarr Provider"}]
+            - !find [authentik_providers_proxy.proxyprovider, {name: "qBittorrent Provider"}]
+  '';
+
   customBlueprintsDir = pkgs.runCommand "authentik-blueprints" { } ''
     cp -rL ${defaultBlueprintsDir}/. $out/
+    chmod u+w $out
     mkdir -p $out/custom
-    cp ${mealieBlueprint} $out/custom/mealie.yaml
-    cp ${rommBlueprint}   $out/custom/romm.yaml
+    cp ${mealieBlueprint}       $out/custom/mealie.yaml
+    cp ${rommBlueprint}         $out/custom/romm.yaml
+    cp ${forwardAuthBlueprint}  $out/custom/forward-auth.yaml
   '';
 in
 {
