@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, ... }:
 let
   defaultBlueprintsDir =
     "${config.services.authentik.authentikComponents.staticWorkdirDeps}/blueprints";

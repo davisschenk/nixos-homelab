@@ -127,7 +127,8 @@ A final entry in the forward-auth blueprints binds all proxy providers to the em
 4. Verify Caddy forward auth works for Grafana, Sonarr, Radarr, Prowlarr, qBittorrent
 5. Run `nix eval .#nixosConfigurations.mangrove.config.services.authentik.settings.blueprints_dir` to confirm the path resolves to the merged Nix store path
 
-## Open Questions Before Implementation
+## Notes
 
-- Confirm whether `lib.mkAfter` on `systemd.services.authentik.serviceConfig.EnvironmentFile` merges with the list the authentik-nix module creates, or conflicts. If it conflicts, a wrapper env file (merging both templates into one) is the fallback.
-- Confirm exact Authentik embedded outpost name on the running instance (default is "authentik Embedded Outpost" but may differ if renamed in UI).
+- Authentik instance has not been deployed yet — blueprints will create all objects from scratch on first boot. The embedded outpost name is the hardcoded default: `"authentik Embedded Outpost"`.
+- OIDC client secrets should be generated and written into SOPS before first `nixos-rebuild switch` so Authentik applies blueprints with the correct secrets on first run.
+- Verify that `lib.mkAfter` on `systemd.services.authentik.serviceConfig.EnvironmentFile` merges cleanly with the list the `authentik-nix` module creates. If it conflicts, the fallback is adding the OIDC secrets directly into the existing `authentik-env` sops template in `auth.nix`.
