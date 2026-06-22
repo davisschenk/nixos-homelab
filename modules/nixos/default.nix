@@ -4,6 +4,7 @@
     ./base.nix
     ./networking.nix
     ./auth.nix
+    ./auth-blueprints.nix
     ./media.nix
     ./arr.nix
     ./monitoring.nix
