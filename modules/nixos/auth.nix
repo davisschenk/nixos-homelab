@@ -15,6 +15,8 @@ in
       AUTHENTIK_SECRET_KEY=${config.sops.placeholder."authentik_secret_key"}
       AUTHENTIK_EMAIL__USERNAME=${config.sops.placeholder."mail_username"}
       AUTHENTIK_EMAIL__PASSWORD=${config.sops.placeholder."mail_password"}
+      MEALIE_OIDC_CLIENT_SECRET=${config.sops.placeholder."mealie_oidc_client_secret"}
+      ROMM_OIDC_CLIENT_SECRET=${config.sops.placeholder."romm_oidc_client_secret"}
     '';
     restartUnits = [
       "authentik.service"
