@@ -15,7 +15,6 @@
       "wheel"
       "libvirtd"
     ];
-    hashedPassword = "$6$p.U6XDrAT9NjW5e8$S7BaDV8W3kv3sIZoOkP0iWmv0Z4s9QFbxx1Tlj6vZXqvg7O1w.cuvnuZgTBl93w4ZS7sjxmMhkFfcxtUUM6Rd/";
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHcsz+eVVzP7F9kK1kvFoa05/9W4/xPgWCSD+cSJoh5a davis@tilt-app"
     ];
