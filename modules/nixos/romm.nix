@@ -131,13 +131,6 @@ in
     };
   };
 
-  services.caddy.virtualHosts."romm.schenkenberger.dev" = {
-    listenAddresses = [ "127.0.0.1" ];
-    extraConfig = ''
-      reverse_proxy localhost:${toString config.mylab.ports.romm}
-    '';
-  };
-
   # romm container volumes bind directly to /persist (never wiped); no
   # impermanence bind-mount needed for those paths.
   # /var/lib/docker is persisted so images survive reboots without re-pulling.

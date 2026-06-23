@@ -11,12 +11,18 @@
     sopsFile = ../../secrets/cloudflare-tunnel.yaml;
   };
 
-  # sops.secrets produces a file with only the raw value; systemd EnvironmentFile
-  # requires KEY=value format, so we use a sops.template to produce it.
+  sops.secrets."cloudflare_api_token" = {
+    sopsFile = ../../secrets/cloudflare-tunnel.yaml;
+  };
+
   sops.templates."cloudflared-env" = {
     content = "CLOUDFLARE_TUNNEL_TOKEN=${config.sops.placeholder."cloudflare_tunnel_token"}";
-
     restartUnits = [ "cloudflared.service" ];
+  };
+
+  sops.templates."caddy-env" = {
+    content = "CLOUDFLARE_API_TOKEN=${config.sops.placeholder."cloudflare_api_token"}";
+    restartUnits = [ "caddy.service" ];
   };
 
   systemd.services.cloudflared = {
@@ -44,21 +50,33 @@
 
   # ---------------------------------------------------------------------------
   # Caddy — reverse proxy for all services (Cloudflare Tunnel → Caddy → service)
-  # All backends bind only to 127.0.0.1; Caddy is never directly reachable
-  # from outside the host.
+  # Built with the caddy-dns/cloudflare plugin so Caddy handles ACME DNS-01
+  # automatically — no external security.acme needed.
   # ---------------------------------------------------------------------------
   services.caddy = {
     enable = true;
 
-    # Use Caddy's internal CA to issue certs for all vhosts; the Cloudflare
-    # Tunnel origin is https://caddy:443 and must have "No TLS Verify" enabled
-    # in the Cloudflare dashboard (Zero Trust → Tunnels → public hostnames).
+    package = pkgs.caddy.withPlugins {
+      plugins = [ "github.com/caddy-dns/cloudflare@v0.2.4" ];
+      hash = "sha256-VHm9POg2KixGsMsAcfFFDMK9x6niRJ1iJV9kkSwkSjc=";
+    };
+
+    # Inject the Cloudflare API token so Caddy's DNS-01 challenge can use it
+    # via {env.CLOUDFLARE_API_TOKEN} in the Caddyfile
+    environmentFile = config.sops.templates."caddy-env".path;
+
     globalConfig = ''
-      local_certs
+      email davisschenk@gmail.com
     '';
 
-    # Snippet used by services that require Authentik SSO
     extraConfig = ''
+      (cloudflare_tls) {
+        encode gzip
+        tls {
+          dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+        }
+      }
+
       (authentik_forward_auth) {
         forward_auth localhost:${toString config.mylab.ports.authentik} {
           uri /outpost.goauthentik.io/auth/caddy
@@ -70,11 +88,13 @@
 
     # Cloudflare Tunnel connects to https://caddy:443 with originServerName
     # "*.schenkenberger.dev", so cloudflared sends TLS SNI="*.schenkenberger.dev".
-    # Caddy matches this site block, presents a wildcard cert, then routes
-    # by HTTP Host header. Individual virtualHosts handle direct connections.
+    # Caddy matches this site block, handles DNS-01 via Cloudflare to obtain a
+    # wildcard cert, then routes by HTTP Host header.
     virtualHosts."*.schenkenberger.dev" = {
       listenAddresses = [ "127.0.0.1" ];
       extraConfig = ''
+        import cloudflare_tls
+
         @auth host auth.schenkenberger.dev
         handle @auth {
           reverse_proxy localhost:${toString config.mylab.ports.authentik}
@@ -144,6 +164,8 @@
   };
 
   environment.persistence."/persist" = {
-    directories = [ "/var/lib/caddy" ];
+    directories = [
+      "/var/lib/caddy"
+    ];
   };
 }

@@ -18,13 +18,6 @@
     "video"
   ];
 
-  services.caddy.virtualHosts."jellyfin.schenkenberger.dev" = {
-    listenAddresses = [ "127.0.0.1" ];
-    extraConfig = ''
-      reverse_proxy localhost:${toString config.mylab.ports.jellyfin}
-    '';
-  };
-
   environment.persistence."/persist" = {
     directories = [ "/var/lib/jellyfin" ];
   };

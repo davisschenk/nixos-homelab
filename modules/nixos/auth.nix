@@ -42,12 +42,6 @@ in
       };
     };
 
-    caddy.virtualHosts."auth.schenkenberger.dev" = {
-      listenAddresses = [ "127.0.0.1" ];
-      extraConfig = ''
-        reverse_proxy localhost:${toString config.mylab.ports.authentik}
-      '';
-    };
   };
 
   environment.persistence."/persist" = {

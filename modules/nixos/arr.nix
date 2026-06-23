@@ -27,37 +27,6 @@
     };
   };
 
-  services.caddy.virtualHosts = {
-    "sonarr.schenkenberger.dev" = {
-      listenAddresses = [ "127.0.0.1" ];
-      extraConfig = ''
-        import authentik_forward_auth
-        reverse_proxy localhost:${toString config.mylab.ports.sonarr}
-      '';
-    };
-    "radarr.schenkenberger.dev" = {
-      listenAddresses = [ "127.0.0.1" ];
-      extraConfig = ''
-        import authentik_forward_auth
-        reverse_proxy localhost:${toString config.mylab.ports.radarr}
-      '';
-    };
-    "prowlarr.schenkenberger.dev" = {
-      listenAddresses = [ "127.0.0.1" ];
-      extraConfig = ''
-        import authentik_forward_auth
-        reverse_proxy localhost:${toString config.mylab.ports.prowlarr}
-      '';
-    };
-    "qbit.schenkenberger.dev" = {
-      listenAddresses = [ "127.0.0.1" ];
-      extraConfig = ''
-        import authentik_forward_auth
-        reverse_proxy localhost:${toString config.mylab.ports.qbittorrent}
-      '';
-    };
-  };
-
   systemd.services = {
     sonarr.unitConfig.RequiresMountsFor = [ "/data/media" "/data/downloads" ];
     radarr.unitConfig.RequiresMountsFor = [ "/data/media" "/data/downloads" ];
