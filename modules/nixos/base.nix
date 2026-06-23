@@ -73,7 +73,11 @@
     systemd.services.wipe-root = {
       description = "Wipe / btrfs subvolume on each boot";
       wantedBy = [ "initrd.target" ];
-      after = [ "systemd-cryptsetup.target" ];
+      after = [
+        "systemd-cryptsetup.target"
+        "dev-disk-by\\x2dlabel-root.device"
+      ];
+      requires = [ "dev-disk-by\\x2dlabel-root.device" ];
       before = [ "sysroot.mount" ];
       unitConfig.DefaultDependencies = false;
       serviceConfig.Type = "oneshot";
