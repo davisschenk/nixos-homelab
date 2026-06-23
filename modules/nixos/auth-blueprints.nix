@@ -205,6 +205,21 @@ let
             - !Find [authentik_providers_proxy.proxyprovider, [name, qBittorrent Provider]]
   '';
 
+  brandingBlueprint = pkgs.writeText "branding.yaml" ''
+    version: 1
+    metadata:
+      name: "Branding"
+      labels:
+        blueprints.goauthentik.io/instantiate: "true"
+    entries:
+      - model: authentik_brands.brand
+        state: present
+        identifiers:
+          default: true
+        attrs:
+          branding_default_flow_background: "branding/flow_background.jpg"
+  '';
+
   customBlueprintsDir = pkgs.runCommand "authentik-blueprints" { } ''
     cp -rL ${defaultBlueprintsDir}/. $out/
     chmod u+w $out
@@ -212,6 +227,7 @@ let
     cp ${mealieBlueprint}       $out/custom/mealie.yaml
     cp ${rommBlueprint}         $out/custom/romm.yaml
     cp ${forwardAuthBlueprint}  $out/custom/forward-auth.yaml
+    cp ${brandingBlueprint}     $out/custom/branding.yaml
   '';
 in
 {
