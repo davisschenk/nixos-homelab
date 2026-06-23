@@ -99,6 +99,7 @@
               fonts.fontconfig.enable = pkgs.lib.mkOverride 500 false;
               environment.systemPackages = [
                 disko.packages.${system}.disko
+                disko.packages.${system}.disko-install
                 (pkgs.writeShellScriptBin "install-mangrove" ''
                   set -euo pipefail
                   echo "==> Installing mangrove from github:davisschenk/nixos-homelab#mangrove"
