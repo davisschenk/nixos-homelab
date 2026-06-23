@@ -1,9 +1,12 @@
 _: {
-  boot.initrd.kernelModules = [ "nvme" ];
-  boot.initrd.availableKernelModules = [
+  boot.initrd.kernelModules = [
+    "nvme"
     "xhci_pci"
-    "ahci"
     "usbhid"
+    "hid_generic"
+  ];
+  boot.initrd.availableKernelModules = [
+    "ahci"
     "usb_storage"
     "sd_mod"
   ];
