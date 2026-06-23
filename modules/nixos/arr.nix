@@ -53,6 +53,13 @@ in
     qbittorrent.unitConfig.RequiresMountsFor = [ "/data/downloads" ];
   };
 
+  vpnNamespaces.wg.portMappings = [
+    {
+      from = config.mylab.ports.qbittorrent;
+      to = config.mylab.ports.qbittorrent;
+    }
+  ];
+
   environment.persistence."/persist" = {
     directories = [ "/var/lib/nixarr" ];
   };
