@@ -91,15 +91,15 @@ build:
 
 # Build and show what would change (dry activate)
 dry-run:
-    {{nixos_rebuild}} dry-activate --flake .#{{host}} --target-host davis@{{host}} --use-remote-sudo
+    {{nixos_rebuild}} dry-activate --flake .#{{host}} --target-host davis@{{host}} --sudo
 
 # Deploy to host via SSH (builds locally, activates remotely)
 deploy: check-secrets
-    {{nixos_rebuild}} switch --flake .#{{host}} --target-host davis@{{host}} --use-remote-sudo
+    {{nixos_rebuild}} switch --flake .#{{host}} --target-host davis@{{host}} --sudo
 
 # Boot into new config on next reboot (without activating now)
 deploy-boot: check-secrets
-    {{nixos_rebuild}} boot --flake .#{{host}} --target-host davis@{{host}} --use-remote-sudo
+    {{nixos_rebuild}} boot --flake .#{{host}} --target-host davis@{{host}} --sudo
 
 # ── Flake ─────────────────────────────────────────────────────────────────────
 
