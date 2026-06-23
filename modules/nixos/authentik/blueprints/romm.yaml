@@ -29,3 +29,11 @@ entries:
       icon: "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons@main/png/romm.png"
       provider: !Find [authentik_providers_oauth2.oauth2provider, [name, RomM Provider]]
       policy_engine_mode: any
+  - model: authentik_policies_binding.policybinding
+    state: present
+    identifiers:
+      target: !Find [authentik_core.application, [slug, romm]]
+      group: !Find [authentik_core.group, [name, super-admin]]
+      order: 0
+    attrs:
+      enabled: true
