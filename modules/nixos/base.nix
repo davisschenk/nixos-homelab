@@ -75,15 +75,15 @@
       wantedBy = [ "initrd.target" ];
       after = [
         "systemd-cryptsetup.target"
-        "dev-disk-by\\x2dlabel-root.device"
+        "dev-nvme0n1p2.device"
       ];
-      requires = [ "dev-disk-by\\x2dlabel-root.device" ];
+      requires = [ "dev-nvme0n1p2.device" ];
       before = [ "sysroot.mount" ];
       unitConfig.DefaultDependencies = false;
       serviceConfig.Type = "oneshot";
       script = ''
         mkdir -p /btrfs_tmp
-        mount -t btrfs -o subvol=/ /dev/disk/by-label/root /btrfs_tmp
+        mount -t btrfs -o subvol=/ /dev/nvme0n1p2 /btrfs_tmp
 
         if [[ -e /btrfs_tmp/@ ]]; then
           mkdir -p /btrfs_tmp/old_roots
