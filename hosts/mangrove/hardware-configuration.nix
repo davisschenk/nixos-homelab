@@ -1,6 +1,6 @@
 _: {
+  boot.initrd.kernelModules = [ "nvme" ];
   boot.initrd.availableKernelModules = [
-    "nvme"
     "xhci_pci"
     "ahci"
     "usbhid"
