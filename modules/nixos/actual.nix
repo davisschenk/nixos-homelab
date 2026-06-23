@@ -17,6 +17,6 @@
   };
 
   environment.persistence."/persist" = {
-    directories = [ "/var/lib/actual" ];
+    directories = [ "/var/lib/private/actual" ];
   };
 }

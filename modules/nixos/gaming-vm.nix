@@ -27,6 +27,10 @@
 
   systemd.services.libvirtd.unitConfig.RequiresMountsFor = [ "/data/vm" ];
 
+  # Disable libvirt's encrypted secrets credential — systemd 260.x refuses to
+  # use a host credential secret on a non-encrypted-at-rest filesystem.
+  systemd.services.libvirtd.serviceConfig.LoadCredentialEncrypted = "";
+
   environment.persistence."/persist" = {
     directories = [ "/var/lib/libvirt" ];
   };

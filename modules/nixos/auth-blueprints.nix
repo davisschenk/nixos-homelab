@@ -27,15 +27,15 @@ let
         identifiers:
           name: "Mealie Provider"
         attrs:
-          authorization_flow: !find [authentik_flows.flow, {slug: "default-provider-authorization-implicit-consent"}]
+          authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
           client_id: "mealie"
-          client_secret: !env_var MEALIE_OIDC_CLIENT_SECRET
+          client_secret: !Env MEALIE_OIDC_CLIENT_SECRET
           redirect_uris:
             - url: "https://mealie.schenkenberger.dev/"
               matching_mode: prefix
           sub_mode: hashed_user_id
           include_claims_in_id_token: true
-          signing_key: !find [authentik_crypto.certificatekeypair, {name: "authentik Self-signed Certificate"}]
+          signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
       - model: authentik_core.application
         state: present
         identifiers:
@@ -43,7 +43,7 @@ let
         attrs:
           name: "Mealie"
           slug: "mealie"
-          provider: !find [authentik_providers_oauth2.oauth2provider, {name: "Mealie Provider"}]
+          provider: !Find [authentik_providers_oauth2.oauth2provider, [name, Mealie Provider]]
           policy_engine_mode: any
   '';
 
@@ -59,15 +59,15 @@ let
         identifiers:
           name: "RomM Provider"
         attrs:
-          authorization_flow: !find [authentik_flows.flow, {slug: "default-provider-authorization-implicit-consent"}]
+          authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
           client_id: "romm"
-          client_secret: !env_var ROMM_OIDC_CLIENT_SECRET
+          client_secret: !Env ROMM_OIDC_CLIENT_SECRET
           redirect_uris:
             - url: "https://romm.schenkenberger.dev/api/oauth/openid"
               matching_mode: strict
           sub_mode: hashed_user_id
           include_claims_in_id_token: true
-          signing_key: !find [authentik_crypto.certificatekeypair, {name: "authentik Self-signed Certificate"}]
+          signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
       - model: authentik_core.application
         state: present
         identifiers:
@@ -75,7 +75,7 @@ let
         attrs:
           name: "RomM"
           slug: "romm"
-          provider: !find [authentik_providers_oauth2.oauth2provider, {name: "RomM Provider"}]
+          provider: !Find [authentik_providers_oauth2.oauth2provider, [name, RomM Provider]]
           policy_engine_mode: any
   '';
 
@@ -91,7 +91,7 @@ let
         identifiers:
           name: "Grafana Provider"
         attrs:
-          authorization_flow: !find [authentik_flows.flow, {slug: "default-provider-authorization-implicit-consent"}]
+          authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
           external_host: "https://grafana.schenkenberger.dev"
           mode: forward_single
           cookie_domain: "schenkenberger.dev"
@@ -102,14 +102,14 @@ let
         attrs:
           name: "Grafana"
           slug: "grafana"
-          provider: !find [authentik_providers_proxy.proxyprovider, {name: "Grafana Provider"}]
+          provider: !Find [authentik_providers_proxy.proxyprovider, [name, Grafana Provider]]
           policy_engine_mode: any
       - model: authentik_providers_proxy.proxyprovider
         state: present
         identifiers:
           name: "Sonarr Provider"
         attrs:
-          authorization_flow: !find [authentik_flows.flow, {slug: "default-provider-authorization-implicit-consent"}]
+          authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
           external_host: "https://sonarr.schenkenberger.dev"
           mode: forward_single
           cookie_domain: "schenkenberger.dev"
@@ -120,14 +120,14 @@ let
         attrs:
           name: "Sonarr"
           slug: "sonarr"
-          provider: !find [authentik_providers_proxy.proxyprovider, {name: "Sonarr Provider"}]
+          provider: !Find [authentik_providers_proxy.proxyprovider, [name, Sonarr Provider]]
           policy_engine_mode: any
       - model: authentik_providers_proxy.proxyprovider
         state: present
         identifiers:
           name: "Radarr Provider"
         attrs:
-          authorization_flow: !find [authentik_flows.flow, {slug: "default-provider-authorization-implicit-consent"}]
+          authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
           external_host: "https://radarr.schenkenberger.dev"
           mode: forward_single
           cookie_domain: "schenkenberger.dev"
@@ -138,14 +138,14 @@ let
         attrs:
           name: "Radarr"
           slug: "radarr"
-          provider: !find [authentik_providers_proxy.proxyprovider, {name: "Radarr Provider"}]
+          provider: !Find [authentik_providers_proxy.proxyprovider, [name, Radarr Provider]]
           policy_engine_mode: any
       - model: authentik_providers_proxy.proxyprovider
         state: present
         identifiers:
           name: "Prowlarr Provider"
         attrs:
-          authorization_flow: !find [authentik_flows.flow, {slug: "default-provider-authorization-implicit-consent"}]
+          authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
           external_host: "https://prowlarr.schenkenberger.dev"
           mode: forward_single
           cookie_domain: "schenkenberger.dev"
@@ -156,14 +156,14 @@ let
         attrs:
           name: "Prowlarr"
           slug: "prowlarr"
-          provider: !find [authentik_providers_proxy.proxyprovider, {name: "Prowlarr Provider"}]
+          provider: !Find [authentik_providers_proxy.proxyprovider, [name, Prowlarr Provider]]
           policy_engine_mode: any
       - model: authentik_providers_proxy.proxyprovider
         state: present
         identifiers:
           name: "qBittorrent Provider"
         attrs:
-          authorization_flow: !find [authentik_flows.flow, {slug: "default-provider-authorization-implicit-consent"}]
+          authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
           external_host: "https://qbit.schenkenberger.dev"
           mode: forward_single
           cookie_domain: "schenkenberger.dev"
@@ -174,7 +174,7 @@ let
         attrs:
           name: "qBittorrent"
           slug: "qbittorrent"
-          provider: !find [authentik_providers_proxy.proxyprovider, {name: "qBittorrent Provider"}]
+          provider: !Find [authentik_providers_proxy.proxyprovider, [name, qBittorrent Provider]]
           policy_engine_mode: any
       - model: authentik_outposts.outpost
         state: present
@@ -182,11 +182,11 @@ let
           name: "authentik Embedded Outpost"
         attrs:
           providers:
-            - !find [authentik_providers_proxy.proxyprovider, {name: "Grafana Provider"}]
-            - !find [authentik_providers_proxy.proxyprovider, {name: "Sonarr Provider"}]
-            - !find [authentik_providers_proxy.proxyprovider, {name: "Radarr Provider"}]
-            - !find [authentik_providers_proxy.proxyprovider, {name: "Prowlarr Provider"}]
-            - !find [authentik_providers_proxy.proxyprovider, {name: "qBittorrent Provider"}]
+            - !Find [authentik_providers_proxy.proxyprovider, [name, Grafana Provider]]
+            - !Find [authentik_providers_proxy.proxyprovider, [name, Sonarr Provider]]
+            - !Find [authentik_providers_proxy.proxyprovider, [name, Radarr Provider]]
+            - !Find [authentik_providers_proxy.proxyprovider, [name, Prowlarr Provider]]
+            - !Find [authentik_providers_proxy.proxyprovider, [name, qBittorrent Provider]]
   '';
 
   customBlueprintsDir = pkgs.runCommand "authentik-blueprints" { } ''

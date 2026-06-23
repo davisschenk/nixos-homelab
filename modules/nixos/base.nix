@@ -130,6 +130,11 @@
     age.keyFile = "/persist/etc/sops/age/keys.txt";
   };
 
+  # DynamicUser=true services require /var/lib/private to be mode 0700.
+  # Impermanence creates it with 0755 when bind-mounting subdirs; `e` adjusts
+  # permissions on an existing directory (unlike `d` which only sets on create).
+  systemd.tmpfiles.rules = [ "e /var/lib/private 0700 root root -" ];
+
   nix = {
     settings = {
       experimental-features = [

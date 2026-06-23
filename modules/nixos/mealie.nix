@@ -66,7 +66,7 @@ in
 
   environment.persistence."/persist" = {
     directories = [
-      "/var/lib/mealie"
+      "/var/lib/private/mealie"
       # /var/lib/postgresql is persisted by base.nix (shared PostgreSQL instance)
     ];
   };
