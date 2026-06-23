@@ -44,6 +44,7 @@ let
         attrs:
           name: "Mealie"
           slug: "mealie"
+          icon: "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons@main/png/mealie.png"
           provider: !Find [authentik_providers_oauth2.oauth2provider, [name, Mealie Provider]]
           policy_engine_mode: any
   '';
@@ -77,6 +78,7 @@ let
         attrs:
           name: "RomM"
           slug: "romm"
+          icon: "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons@main/png/romm.png"
           provider: !Find [authentik_providers_oauth2.oauth2provider, [name, RomM Provider]]
           policy_engine_mode: any
   '';
@@ -105,6 +107,7 @@ let
         attrs:
           name: "Grafana"
           slug: "grafana"
+          icon: "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons@main/png/grafana.png"
           provider: !Find [authentik_providers_proxy.proxyprovider, [name, Grafana Provider]]
           policy_engine_mode: any
       - model: authentik_providers_proxy.proxyprovider
@@ -124,6 +127,7 @@ let
         attrs:
           name: "Sonarr"
           slug: "sonarr"
+          icon: "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons@main/png/sonarr.png"
           provider: !Find [authentik_providers_proxy.proxyprovider, [name, Sonarr Provider]]
           policy_engine_mode: any
       - model: authentik_providers_proxy.proxyprovider
@@ -143,6 +147,7 @@ let
         attrs:
           name: "Radarr"
           slug: "radarr"
+          icon: "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons@main/png/radarr.png"
           provider: !Find [authentik_providers_proxy.proxyprovider, [name, Radarr Provider]]
           policy_engine_mode: any
       - model: authentik_providers_proxy.proxyprovider
@@ -162,6 +167,7 @@ let
         attrs:
           name: "Prowlarr"
           slug: "prowlarr"
+          icon: "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons@main/png/prowlarr.png"
           provider: !Find [authentik_providers_proxy.proxyprovider, [name, Prowlarr Provider]]
           policy_engine_mode: any
       - model: authentik_providers_proxy.proxyprovider
@@ -181,6 +187,7 @@ let
         attrs:
           name: "qBittorrent"
           slug: "qbittorrent"
+          icon: "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons@main/png/qbittorrent.png"
           provider: !Find [authentik_providers_proxy.proxyprovider, [name, qBittorrent Provider]]
           policy_engine_mode: any
       - model: authentik_outposts.outpost
