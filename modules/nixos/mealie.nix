@@ -35,6 +35,7 @@ in
       credentialsFile = config.sops.templates."mealie-credentials".path;
       settings = {
         ALLOW_SIGNUP = "false";
+        ALLOW_PASSWORD_LOGIN = "false";
         # OIDC — non-secret settings; client secret is in credentialsFile
         OIDC_AUTH_ENABLED = "true";
         OIDC_PROVIDER_NAME = "Authentik";
