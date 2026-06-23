@@ -32,7 +32,9 @@ let
           client_id: "mealie"
           client_secret: !Env MEALIE_OIDC_CLIENT_SECRET
           redirect_uris:
-            - url: "https://mealie.schenkenberger.dev/"
+            - url: "https://mealie.schenkenberger.dev/login"
+              matching_mode: strict
+            - url: "https://mealie.schenkenberger.dev/login?direct=1"
               matching_mode: strict
           sub_mode: hashed_user_id
           include_claims_in_id_token: true
