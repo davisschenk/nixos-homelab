@@ -27,6 +27,7 @@ bootstrap-age-key:
 # ── SOPS ──────────────────────────────────────────────────────────────────────
 
 sops := "nix --extra-experimental-features nix-command --extra-experimental-features flakes shell nixpkgs#sops --command sops"
+nixos_rebuild := "nix --extra-experimental-features 'nix-command flakes' run nixpkgs#nixos-rebuild --"
 
 # Edit or create a secret file (e.g. `just edit authentik`)
 edit file:
@@ -86,19 +87,19 @@ check:
 
 # Build the system (dry-run, no activation)
 build:
-    nixos-rebuild build --flake .#{{host}}
+    {{nixos_rebuild}} build --flake .#{{host}}
 
 # Build and show what would change (dry activate)
 dry-run:
-    nixos-rebuild dry-activate --flake .#{{host}} --target-host {{host}} --use-remote-sudo
+    {{nixos_rebuild}} dry-activate --flake .#{{host}} --target-host davis@{{host}} --use-remote-sudo
 
 # Deploy to host via SSH (builds locally, activates remotely)
 deploy: check-secrets
-    nixos-rebuild switch --flake .#{{host}} --target-host {{host}} --build-host localhost --use-remote-sudo
+    {{nixos_rebuild}} switch --flake .#{{host}} --target-host davis@{{host}} --use-remote-sudo
 
 # Boot into new config on next reboot (without activating now)
 deploy-boot: check-secrets
-    nixos-rebuild boot --flake .#{{host}} --target-host {{host}} --build-host localhost --use-remote-sudo
+    {{nixos_rebuild}} boot --flake .#{{host}} --target-host davis@{{host}} --use-remote-sudo
 
 # ── Flake ─────────────────────────────────────────────────────────────────────
 

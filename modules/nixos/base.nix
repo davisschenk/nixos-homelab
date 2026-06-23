@@ -21,7 +21,7 @@
   };
 
   security.sudo = {
-    wheelNeedsPassword = true;
+    wheelNeedsPassword = false;
     extraRules = [
       {
         users = [ "davis" ];
