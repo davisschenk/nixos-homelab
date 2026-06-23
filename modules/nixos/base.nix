@@ -1,5 +1,6 @@
 {
   pkgs,
+  lib,
   ...
 }:
 {
@@ -131,9 +132,16 @@
   };
 
   # DynamicUser=true services require /var/lib/private to be mode 0700.
-  # Impermanence creates it with 0755 when bind-mounting subdirs; `e` adjusts
-  # permissions on an existing directory (unlike `d` which only sets on create).
-  systemd.tmpfiles.rules = [ "e /var/lib/private 0700 root root -" ];
+  # Impermanence resets it to 0755 on each activation, and systemd-tmpfiles-resetup
+  # has RemainAfterExit=true so it won't re-run on subsequent switches to fix it.
+  # Fix: force RemainAfterExit=false so tmpfiles re-runs every activation, and
+  # also enforce the correct mode on the persist source so impermanence copies 0700.
+  # See: https://github.com/nix-community/impermanence/issues/254
+  systemd.tmpfiles.rules = [
+    "d /persist/var/lib/private 0700 root root -"
+    "e /var/lib/private 0700 root root -"
+  ];
+  systemd.services."systemd-tmpfiles-resetup".serviceConfig.RemainAfterExit = lib.mkForce false;
 
   nix = {
     settings = {
