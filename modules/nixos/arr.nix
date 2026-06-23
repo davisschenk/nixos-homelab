@@ -1,4 +1,14 @@
-{ config, ... }:
+{ config, pkgs, ... }:
+let
+  setAuthExternal = stateDir: pkgs.writeShellScript "set-auth-external" ''
+    config="${stateDir}/config.xml"
+    if [ -f "$config" ]; then
+      ${pkgs.xmlstarlet}/bin/xmlstarlet ed --inplace \
+        -u "/Config/AuthenticationMethod" -v "External" \
+        "$config"
+    fi
+  '';
+in
 {
   sops.secrets."vpn_wg_conf" = {
     sopsFile = ../../secrets/vpn.yaml;
@@ -28,9 +38,18 @@
   };
 
   systemd.services = {
-    sonarr.unitConfig.RequiresMountsFor = [ "/data/media" "/data/downloads" ];
-    radarr.unitConfig.RequiresMountsFor = [ "/data/media" "/data/downloads" ];
-    prowlarr.unitConfig.RequiresMountsFor = [ "/data/downloads" ];
+    sonarr = {
+      unitConfig.RequiresMountsFor = [ "/data/media" "/data/downloads" ];
+      serviceConfig.ExecStartPre = [ (setAuthExternal "/var/lib/nixarr/sonarr") ];
+    };
+    radarr = {
+      unitConfig.RequiresMountsFor = [ "/data/media" "/data/downloads" ];
+      serviceConfig.ExecStartPre = [ (setAuthExternal "/var/lib/nixarr/radarr") ];
+    };
+    prowlarr = {
+      unitConfig.RequiresMountsFor = [ "/data/downloads" ];
+      serviceConfig.ExecStartPre = [ (setAuthExternal "/var/lib/nixarr/prowlarr") ];
+    };
     qbittorrent.unitConfig.RequiresMountsFor = [ "/data/downloads" ];
   };
 
