@@ -106,6 +106,7 @@
                   echo "==> This will ERASE /dev/nvme0n1 and /dev/sda. Ctrl-C to abort."
                   read -rp "Press Enter to continue..."
                   sudo ${disko.packages.${system}.disko-install}/bin/disko-install \
+                    --mode destroy \
                     --flake "github:davisschenk/nixos-homelab#mangrove" \
                     --disk nvme /dev/nvme0n1 \
                     --disk hdd /dev/sda
