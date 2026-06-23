@@ -46,6 +46,7 @@ in
         OIDC_ADMIN_GROUP = "mealie-admin";
         OIDC_AUTO_REDIRECT = "true";
         OIDC_REMEMBER_ME = "true";
+        OIDC_SCOPES_OVERRIDE = "openid profile email groups";
         # SMTP — user (API key) and password (secret key) are in credentialsFile
         SMTP_HOST = "in-v3.mailjet.com";
         SMTP_PORT = "587";

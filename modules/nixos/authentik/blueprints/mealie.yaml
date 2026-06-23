@@ -22,7 +22,7 @@ entries:
       name: "mealie OAuth Mapping: Groups"
     attrs:
       name: "mealie OAuth Mapping: Groups"
-      scope_name: "profile"
+      scope_name: "groups"
       expression: |
         return {"groups": [group.name for group in request.user.ak_groups.all()]}
   - model: authentik_providers_oauth2.oauth2provider
