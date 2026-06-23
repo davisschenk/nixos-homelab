@@ -22,6 +22,15 @@ let
           name: "mealie-admin"
         attrs:
           name: "mealie-admin"
+      - model: authentik_providers_oauth2.scopemapping
+        state: present
+        identifiers:
+          name: "mealie OAuth Mapping: Groups"
+        attrs:
+          name: "mealie OAuth Mapping: Groups"
+          scope_name: "profile"
+          expression: |
+            return {"groups": [group.name for group in request.user.ak_groups.all()]}
       - model: authentik_providers_oauth2.oauth2provider
         state: present
         identifiers:
@@ -36,6 +45,11 @@ let
               matching_mode: strict
             - url: "https://mealie.schenkenberger.dev/login?direct=1"
               matching_mode: strict
+          property_mappings:
+            - !Find [authentik_providers_oauth2.scopemapping, [managed, "goauthentik.io/providers/oauth2/scope-openid"]]
+            - !Find [authentik_providers_oauth2.scopemapping, [managed, "goauthentik.io/providers/oauth2/scope-email"]]
+            - !Find [authentik_providers_oauth2.scopemapping, [managed, "goauthentik.io/providers/oauth2/scope-profile"]]
+            - !Find [authentik_providers_oauth2.scopemapping, [name, "mealie OAuth Mapping: Groups"]]
           sub_mode: hashed_user_id
           include_claims_in_id_token: true
           signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
@@ -49,6 +63,22 @@ let
           icon: "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons@main/png/mealie.png"
           provider: !Find [authentik_providers_oauth2.oauth2provider, [name, Mealie Provider]]
           policy_engine_mode: any
+      - model: authentik_policies_binding.policybinding
+        state: present
+        identifiers:
+          target: !Find [authentik_core.application, [slug, mealie]]
+          group: !Find [authentik_core.group, [name, mealie-user]]
+          order: 0
+        attrs:
+          enabled: true
+      - model: authentik_policies_binding.policybinding
+        state: present
+        identifiers:
+          target: !Find [authentik_core.application, [slug, mealie]]
+          group: !Find [authentik_core.group, [name, mealie-admin]]
+          order: 10
+        attrs:
+          enabled: true
   '';
 
   rommBlueprint = pkgs.writeText "romm.yaml" ''
