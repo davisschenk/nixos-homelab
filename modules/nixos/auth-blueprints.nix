@@ -28,11 +28,12 @@ let
           name: "Mealie Provider"
         attrs:
           authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+          invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
           client_id: "mealie"
           client_secret: !Env MEALIE_OIDC_CLIENT_SECRET
           redirect_uris:
             - url: "https://mealie.schenkenberger.dev/"
-              matching_mode: prefix
+              matching_mode: strict
           sub_mode: hashed_user_id
           include_claims_in_id_token: true
           signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
@@ -60,6 +61,7 @@ let
           name: "RomM Provider"
         attrs:
           authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+          invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
           client_id: "romm"
           client_secret: !Env ROMM_OIDC_CLIENT_SECRET
           redirect_uris:
@@ -92,6 +94,7 @@ let
           name: "Grafana Provider"
         attrs:
           authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+          invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
           external_host: "https://grafana.schenkenberger.dev"
           mode: forward_single
           cookie_domain: "schenkenberger.dev"
@@ -110,6 +113,7 @@ let
           name: "Sonarr Provider"
         attrs:
           authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+          invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
           external_host: "https://sonarr.schenkenberger.dev"
           mode: forward_single
           cookie_domain: "schenkenberger.dev"
@@ -128,6 +132,7 @@ let
           name: "Radarr Provider"
         attrs:
           authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+          invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
           external_host: "https://radarr.schenkenberger.dev"
           mode: forward_single
           cookie_domain: "schenkenberger.dev"
@@ -146,6 +151,7 @@ let
           name: "Prowlarr Provider"
         attrs:
           authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+          invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
           external_host: "https://prowlarr.schenkenberger.dev"
           mode: forward_single
           cookie_domain: "schenkenberger.dev"
@@ -164,6 +170,7 @@ let
           name: "qBittorrent Provider"
         attrs:
           authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+          invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
           external_host: "https://qbit.schenkenberger.dev"
           mode: forward_single
           cookie_domain: "schenkenberger.dev"
