@@ -3,7 +3,7 @@
   ...
 }:
 {
-  time.timeZone = "America/Chicago";
+  time.timeZone = "America/Denver";
   i18n.defaultLocale = "en_US.UTF-8";
 
   # Disable mutable users — all users declared in Nix
