@@ -1,0 +1,26 @@
+version: 1
+metadata:
+  name: "Mangrove - qBittorrent"
+  labels:
+    blueprints.goauthentik.io/instantiate: "true"
+entries:
+  - model: authentik_providers_proxy.proxyprovider
+    state: present
+    identifiers:
+      name: "qBittorrent Provider"
+    attrs:
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      external_host: "https://qbit.schenkenberger.dev"
+      mode: forward_single
+      cookie_domain: "schenkenberger.dev"
+  - model: authentik_core.application
+    state: present
+    identifiers:
+      slug: "qbittorrent"
+    attrs:
+      name: "qBittorrent"
+      slug: "qbittorrent"
+      icon: "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons@main/png/qbittorrent.png"
+      provider: !Find [authentik_providers_proxy.proxyprovider, [name, qBittorrent Provider]]
+      policy_engine_mode: any

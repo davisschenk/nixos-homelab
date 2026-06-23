@@ -1,7 +1,7 @@
 { config, pkgs, ... }:
 let
-  sopsFile = ../../secrets/authentik.yaml;
-  mailSopsFile = ../../secrets/mail.yaml;
+  sopsFile = ../../../secrets/authentik.yaml;
+  mailSopsFile = ../../../secrets/mail.yaml;
 in
 {
   sops.secrets = {
@@ -46,7 +46,7 @@ in
 
   systemd.tmpfiles.rules = [
     "d /var/lib/private/authentik/media/public/branding 0750 authentik authentik - -"
-    "C+ /var/lib/private/authentik/media/public/branding/flow_background.jpg 0640 authentik authentik - ${../../assets/flow_background.jpg}"
+    "C+ /var/lib/private/authentik/media/public/branding/flow_background.jpg 0640 authentik authentik - ${../../../assets/flow_background.jpg}"
   ];
 
   environment.persistence."/persist" = {

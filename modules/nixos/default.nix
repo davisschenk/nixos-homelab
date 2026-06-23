@@ -3,8 +3,7 @@
     ./ports.nix
     ./base.nix
     ./networking.nix
-    ./auth.nix
-    ./auth-blueprints.nix
+    ./authentik
     ./media.nix
     ./arr.nix
     ./monitoring.nix

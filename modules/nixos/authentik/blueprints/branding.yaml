@@ -1,0 +1,12 @@
+version: 1
+metadata:
+  name: "Mangrove - Branding"
+  labels:
+    blueprints.goauthentik.io/instantiate: "true"
+entries:
+  - model: authentik_brands.brand
+    state: present
+    identifiers:
+      default: true
+    attrs:
+      branding_default_flow_background: "branding/flow_background.jpg"

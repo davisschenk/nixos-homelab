@@ -1,0 +1,17 @@
+version: 1
+metadata:
+  name: "Mangrove - Outpost"
+  labels:
+    blueprints.goauthentik.io/instantiate: "true"
+entries:
+  - model: authentik_outposts.outpost
+    state: present
+    identifiers:
+      name: "authentik Embedded Outpost"
+    attrs:
+      providers:
+        - !Find [authentik_providers_proxy.proxyprovider, [name, Grafana Provider]]
+        - !Find [authentik_providers_proxy.proxyprovider, [name, Sonarr Provider]]
+        - !Find [authentik_providers_proxy.proxyprovider, [name, Radarr Provider]]
+        - !Find [authentik_providers_proxy.proxyprovider, [name, Prowlarr Provider]]
+        - !Find [authentik_providers_proxy.proxyprovider, [name, qBittorrent Provider]]

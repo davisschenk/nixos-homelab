@@ -1,0 +1,83 @@
+version: 1
+metadata:
+  name: "Mangrove - Super Admin"
+  labels:
+    blueprints.goauthentik.io/instantiate: "true"
+entries:
+  - model: authentik_core.group
+    state: present
+    identifiers:
+      name: "super-admin"
+    attrs:
+      name: "super-admin"
+      is_superuser: true
+
+  - model: authentik_core.group
+    state: present
+    identifiers:
+      name: "mealie-admin"
+    attrs:
+      name: "mealie-admin"
+      parent: !Find [authentik_core.group, [name, super-admin]]
+
+  - model: authentik_core.group
+    state: present
+    identifiers:
+      name: "mealie-user"
+    attrs:
+      name: "mealie-user"
+      parent: !Find [authentik_core.group, [name, super-admin]]
+
+  - model: authentik_policies_binding.policybinding
+    state: present
+    identifiers:
+      target: !Find [authentik_core.application, [slug, romm]]
+      group: !Find [authentik_core.group, [name, super-admin]]
+      order: 0
+    attrs:
+      enabled: true
+
+  - model: authentik_policies_binding.policybinding
+    state: present
+    identifiers:
+      target: !Find [authentik_core.application, [slug, grafana]]
+      group: !Find [authentik_core.group, [name, super-admin]]
+      order: 0
+    attrs:
+      enabled: true
+
+  - model: authentik_policies_binding.policybinding
+    state: present
+    identifiers:
+      target: !Find [authentik_core.application, [slug, sonarr]]
+      group: !Find [authentik_core.group, [name, super-admin]]
+      order: 0
+    attrs:
+      enabled: true
+
+  - model: authentik_policies_binding.policybinding
+    state: present
+    identifiers:
+      target: !Find [authentik_core.application, [slug, radarr]]
+      group: !Find [authentik_core.group, [name, super-admin]]
+      order: 0
+    attrs:
+      enabled: true
+
+  - model: authentik_policies_binding.policybinding
+    state: present
+    identifiers:
+      target: !Find [authentik_core.application, [slug, prowlarr]]
+      group: !Find [authentik_core.group, [name, super-admin]]
+      order: 0
+    attrs:
+      enabled: true
+
+  - model: authentik_policies_binding.policybinding
+    state: present
+    identifiers:
+      target: !Find [authentik_core.application, [slug, qbittorrent]]
+      group: !Find [authentik_core.group, [name, super-admin]]
+      order: 0
+    attrs:
+      enabled: true
