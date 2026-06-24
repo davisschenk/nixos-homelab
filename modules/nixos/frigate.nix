@@ -1,10 +1,10 @@
 { config, ... }:
 {
   sops.secrets."frigate_rtsp_username" = {
-    sopsFile = ../../../secrets/frigate.yaml;
+    sopsFile = ../../secrets/frigate.yaml;
   };
   sops.secrets."frigate_rtsp_password" = {
-    sopsFile = ../../../secrets/frigate.yaml;
+    sopsFile = ../../secrets/frigate.yaml;
   };
 
   sops.templates."frigate-config" = {
