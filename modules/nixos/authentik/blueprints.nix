@@ -13,7 +13,7 @@ let
   prowlarrBlueprint = pkgs.writeText "prowlarr.yaml" (builtins.readFile ./blueprints/prowlarr.yaml);
   qbittorrentBlueprint = pkgs.writeText "qbittorrent.yaml" (builtins.readFile ./blueprints/qbittorrent.yaml);
   jellyfinBlueprint = pkgs.writeText "jellyfin.yaml" (builtins.readFile ./blueprints/jellyfin.yaml);
-  overseerrBlueprint = pkgs.writeText "overseerr.yaml" (builtins.readFile ./blueprints/overseerr.yaml);
+  jellyseerrBlueprint = pkgs.writeText "jellyseerr.yaml" (builtins.readFile ./blueprints/jellyseerr.yaml);
   outpostBlueprint = pkgs.writeText "outpost.yaml" (builtins.readFile ./blueprints/outpost.yaml);
   superAdminBlueprint = pkgs.writeText "super-admin.yaml" (builtins.readFile ./blueprints/super-admin.yaml);
 
@@ -31,7 +31,7 @@ let
     cp ${prowlarrBlueprint}     $out/custom/prowlarr.yaml
     cp ${qbittorrentBlueprint}  $out/custom/qbittorrent.yaml
     cp ${jellyfinBlueprint}     $out/custom/jellyfin.yaml
-    cp ${overseerrBlueprint}    $out/custom/overseerr.yaml
+    cp ${jellyseerrBlueprint}   $out/custom/jellyseerr.yaml
     cp ${outpostBlueprint}      $out/custom/outpost.yaml
     cp ${superAdminBlueprint}   $out/custom/super-admin.yaml
   '';

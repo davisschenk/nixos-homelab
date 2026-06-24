@@ -10,7 +10,7 @@ in
     "mail_password" = { sopsFile = mailSopsFile; };
     "grafana_oauth_client_secret" = { sopsFile = ../../../secrets/grafana.yaml; };
     "jellyfin_oidc_client_secret" = { sopsFile = ../../../secrets/jellyfin.yaml; };
-    "overseerr_oidc_client_secret" = { sopsFile = ../../../secrets/overseerr.yaml; };
+    "jellyseerr_oidc_client_secret" = { sopsFile = ../../../secrets/jellyseerr.yaml; };
   };
 
   sops.templates."authentik-env" = {
@@ -22,7 +22,7 @@ in
       ROMM_OIDC_CLIENT_SECRET=${config.sops.placeholder."romm_oidc_client_secret"}
       GRAFANA_OIDC_CLIENT_SECRET=${config.sops.placeholder."grafana_oauth_client_secret"}
       JELLYFIN_OIDC_CLIENT_SECRET=${config.sops.placeholder."jellyfin_oidc_client_secret"}
-      OVERSEERR_OIDC_CLIENT_SECRET=${config.sops.placeholder."overseerr_oidc_client_secret"}
+      JELLYSEERR_OIDC_CLIENT_SECRET=${config.sops.placeholder."jellyseerr_oidc_client_secret"}
     '';
     restartUnits = [
       "authentik.service"

@@ -152,12 +152,16 @@
 
         @seerr host seerr.schenkenberger.dev
         handle @seerr {
-          reverse_proxy localhost:${toString config.mylab.ports.overseerr}
+          reverse_proxy localhost:${toString config.mylab.ports.jellyseerr}
         }
 
         @files host files.schenkenberger.dev
         handle @files {
-          reverse_proxy localhost:${toString config.mylab.ports.copyparty}
+          import authentik_forward_auth
+          reverse_proxy localhost:${toString config.mylab.ports.copyparty} {
+            header_up X-Idp-User {http.request.header.X-Authentik-Username}
+            header_up X-Idp-Groups {http.request.header.X-Authentik-Groups}
+          }
         }
 
         @panel host panel.schenkenberger.dev
