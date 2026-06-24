@@ -14,6 +14,7 @@ let
   qbittorrentBlueprint = pkgs.writeText "qbittorrent.yaml" (builtins.readFile ./blueprints/qbittorrent.yaml);
   jellyfinBlueprint = pkgs.writeText "jellyfin.yaml" (builtins.readFile ./blueprints/jellyfin.yaml);
   jellyseerrBlueprint = pkgs.writeText "jellyseerr.yaml" (builtins.readFile ./blueprints/jellyseerr.yaml);
+  copypartyBlueprint = pkgs.writeText "copyparty.yaml" (builtins.readFile ./blueprints/copyparty.yaml);
   outpostBlueprint = pkgs.writeText "outpost.yaml" (builtins.readFile ./blueprints/outpost.yaml);
   superAdminBlueprint = pkgs.writeText "super-admin.yaml" (builtins.readFile ./blueprints/super-admin.yaml);
 
@@ -32,6 +33,7 @@ let
     cp ${qbittorrentBlueprint}  $out/custom/qbittorrent.yaml
     cp ${jellyfinBlueprint}     $out/custom/jellyfin.yaml
     cp ${jellyseerrBlueprint}   $out/custom/jellyseerr.yaml
+    cp ${copypartyBlueprint}    $out/custom/copyparty.yaml
     cp ${outpostBlueprint}      $out/custom/outpost.yaml
     cp ${superAdminBlueprint}   $out/custom/super-admin.yaml
   '';
