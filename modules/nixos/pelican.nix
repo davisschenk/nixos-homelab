@@ -47,7 +47,7 @@ in
       MAIL_PASSWORD=${config.sops.placeholder."mail_password"}
     '';
     owner = config.services.pelican.panel.user;
-    restartUnits = [ "pelican-panel-setup.service" ];
+    restartUnits = [ "pelican-panel-setup.service" "pelican-panel-queue.service" ];
   };
 
   services = {

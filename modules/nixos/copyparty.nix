@@ -8,7 +8,7 @@
       no-reload = true;
       idp-h-usr = "x-idp-user";
       idp-h-grp = "x-idp-groups";
-      xff-src = "lan";
+      xff-src = "127.0.0.1";
     };
     volumes = {
       "/media" = {

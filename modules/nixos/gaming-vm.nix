@@ -29,6 +29,7 @@
 
   # Disable libvirt's encrypted secrets credential — systemd 260.x refuses to
   # use a host credential secret on a non-encrypted-at-rest filesystem.
+  # TODO: re-evaluate and remove this workaround when systemd >= 261 is deployed.
   systemd.services.libvirtd.serviceConfig.LoadCredentialEncrypted = "";
 
   environment.persistence."/persist" = {

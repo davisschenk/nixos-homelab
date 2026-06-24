@@ -16,6 +16,7 @@
   users.users.jellyfin.extraGroups = [
     "render"
     "video"
+    "media"
   ];
 
   environment.persistence."/persist" = {

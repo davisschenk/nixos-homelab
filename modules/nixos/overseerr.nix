@@ -12,7 +12,7 @@
   };
 
   systemd.tmpfiles.rules = [
-    "d /persist/containers/jellyseerr/config 0750 root root -"
+    "d /persist/containers/jellyseerr/config 0755 root root -"
   ];
 
   systemd.services."docker-jellyseerr" = {
