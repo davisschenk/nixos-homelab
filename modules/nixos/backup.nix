@@ -26,6 +26,7 @@ in
       exclude = [
         "/persist/containers/romm/db"
         "/persist/var/lib/mysql"
+        "/persist/var/lib/postgresql"
         "/persist/etc/ssh/ssh_host_ed25519_key"
         "/persist/etc/sops/age/keys.txt"
       ];
