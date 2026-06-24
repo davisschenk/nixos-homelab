@@ -10,7 +10,6 @@ entries:
       name: "authentik Embedded Outpost"
     attrs:
       providers:
-        - !Find [authentik_providers_proxy.proxyprovider, [name, Grafana Provider]]
         - !Find [authentik_providers_proxy.proxyprovider, [name, Sonarr Provider]]
         - !Find [authentik_providers_proxy.proxyprovider, [name, Radarr Provider]]
         - !Find [authentik_providers_proxy.proxyprovider, [name, Prowlarr Provider]]

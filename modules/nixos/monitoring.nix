@@ -11,6 +11,11 @@ in
     owner = "grafana";
   };
 
+  sops.secrets."grafana_oauth_client_secret" = {
+    sopsFile = ../../secrets/grafana.yaml;
+    owner = "grafana";
+  };
+
   services = {
     prometheus = {
       enable = true;
@@ -62,6 +67,25 @@ in
         };
         analytics.reporting_enabled = false;
         security.secret_key = "$__file{${config.sops.secrets."grafana_secret_key".path}}";
+
+        "auth" = {
+          signout_redirect_url = "https://authentik.schenkenberger.dev/application/o/grafana/end-session/";
+          oauth_auto_login = true;
+        };
+
+        "auth.generic_oauth" = {
+          enabled = true;
+          name = "authentik";
+          allow_sign_up = true;
+          client_id = "grafana";
+          client_secret = "$__file{${config.sops.secrets."grafana_oauth_client_secret".path}}";
+          scopes = "openid profile email groups";
+          auth_url = "https://authentik.schenkenberger.dev/application/o/authorize/";
+          token_url = "https://authentik.schenkenberger.dev/application/o/token/";
+          api_url = "https://authentik.schenkenberger.dev/application/o/userinfo/";
+          role_attribute_path = "contains(groups, 'super-admin') && 'Admin' || 'Viewer'";
+          allow_assign_grafana_admin = true;
+        };
       };
 
       provision = {

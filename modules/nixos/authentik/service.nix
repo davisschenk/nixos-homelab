@@ -8,6 +8,7 @@ in
     "authentik_secret_key" = { inherit sopsFile; };
     "mail_username" = { sopsFile = mailSopsFile; };
     "mail_password" = { sopsFile = mailSopsFile; };
+    "grafana_oauth_client_secret" = { sopsFile = ../../../secrets/grafana.yaml; };
   };
 
   sops.templates."authentik-env" = {
@@ -17,6 +18,7 @@ in
       AUTHENTIK_EMAIL__PASSWORD=${config.sops.placeholder."mail_password"}
       MEALIE_OIDC_CLIENT_SECRET=${config.sops.placeholder."mealie_oidc_client_secret"}
       ROMM_OIDC_CLIENT_SECRET=${config.sops.placeholder."romm_oidc_client_secret"}
+      GRAFANA_OIDC_CLIENT_SECRET=${config.sops.placeholder."grafana_oauth_client_secret"}
     '';
     restartUnits = [
       "authentik.service"
