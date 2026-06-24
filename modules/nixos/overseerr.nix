@@ -1,16 +1,5 @@
 { config, ... }:
 {
-  sops.secrets."jellyseerr_oidc_client_secret" = {
-    sopsFile = ../../../secrets/jellyseerr.yaml;
-  };
-
-  sops.templates."jellyseerr-env" = {
-    content = ''
-      JELLYFIN_SERVER_URL=http://localhost:${toString config.mylab.ports.jellyfin}
-    '';
-    restartUnits = [ "docker-jellyseerr.service" ];
-  };
-
   virtualisation.oci-containers.containers.jellyseerr = {
     image = "fallenbagel/jellyseerr:2.5.2";
     autoStart = true;
