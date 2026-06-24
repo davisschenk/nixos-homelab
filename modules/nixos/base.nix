@@ -21,24 +21,15 @@
     ];
   };
 
-  security.sudo = {
-    wheelNeedsPassword = false;
-    extraRules = [
-      {
-        users = [ "davis" ];
-        commands = [
-          { command = "/run/current-system/sw/bin/nixos-rebuild"; options = [ "NOPASSWD" ]; }
-          { command = "/run/current-system/sw/bin/systemctl"; options = [ "NOPASSWD" ]; }
-        ];
-      }
-    ];
-  };
+  security.sudo.wheelNeedsPassword = false;
 
   services.openssh = {
     enable = true;
     settings = {
       PasswordAuthentication = false;
       PermitRootLogin = "no";
+      AllowUsers = [ "davis" ];
+      MaxAuthTries = 3;
     };
     # Store host keys in /persist so they survive reboots
     hostKeys = [
@@ -58,6 +49,7 @@
   services.avahi = {
     enable = true;
     nssmdns4 = true;
+    allowInterfaces = [ "enp3s0" ];
     publish = {
       enable = true;
       addresses = true;
@@ -135,11 +127,8 @@
   # /persist itself must survive — it's on @persist subvolume, not wiped
   fileSystems."/persist".neededForBoot = true;
 
-  # sops-nix secrets management with age encryption
-  # Each secret specifies its own sopsFile explicitly; no defaultSopsFile needed.
-  sops = {
-    age.keyFile = "/persist/etc/sops/age/keys.txt";
-  };
+  # sops-nix decrypts secrets using the SSH host key at boot (auto-imported from
+  # services.openssh.hostKeys). No explicit age.keyFile needed.
 
   # DynamicUser=true services require /var/lib/private to be mode 0700.
   # Impermanence resets it to 0755 on each activation, and systemd-tmpfiles-resetup
