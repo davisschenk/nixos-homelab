@@ -18,6 +18,7 @@ let
   actualBlueprint = pkgs.writeText "actual.yaml" (builtins.readFile ./blueprints/actual.yaml);
   outpostBlueprint = pkgs.writeText "outpost.yaml" (builtins.readFile ./blueprints/outpost.yaml);
   frigateBlueprint = pkgs.writeText "frigate.yaml" (builtins.readFile ./blueprints/frigate.yaml);
+  homeAssistantBlueprint = pkgs.writeText "home-assistant.yaml" (builtins.readFile ./blueprints/home-assistant.yaml);
 
   customBlueprintsDir = pkgs.runCommand "authentik-blueprints" { } ''
     cp -rL ${defaultBlueprintsDir}/. $out/
@@ -37,7 +38,8 @@ let
     cp ${copypartyBlueprint}    $out/custom/copyparty.yaml
     cp ${actualBlueprint}       $out/custom/actual.yaml
     cp ${outpostBlueprint}      $out/custom/outpost.yaml
-    cp ${frigateBlueprint}      $out/custom/frigate.yaml
+    cp ${frigateBlueprint}          $out/custom/frigate.yaml
+    cp ${homeAssistantBlueprint}    $out/custom/home-assistant.yaml
   '';
 in
 {

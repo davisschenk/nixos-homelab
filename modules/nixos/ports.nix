@@ -86,5 +86,10 @@
       default = 5000;
       description = "Frigate NVR HTTP listen port.";
     };
+    homeassistant = lib.mkOption {
+      type = lib.types.port;
+      default = 8123;
+      description = "Home Assistant HTTP listen port.";
+    };
   };
 }

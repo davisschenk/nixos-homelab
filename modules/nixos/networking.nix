@@ -173,6 +173,12 @@
           import authentik_forward_auth
           reverse_proxy localhost:${toString config.mylab.ports.frigate}
         }
+
+        @homeassistant host homeassistant.schenkenberger.dev
+        handle @homeassistant {
+          import authentik_forward_auth
+          reverse_proxy localhost:${toString config.mylab.ports.homeassistant}
+        }
       '';
     };
   };

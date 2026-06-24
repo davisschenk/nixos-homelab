@@ -11,7 +11,9 @@
     path = "/persist/containers/frigate/config.yml";
     content = ''
       mqtt:
-        enabled: false
+        enabled: true
+        host: host.docker.internal
+        port: 1883
 
       ffmpeg:
         hwaccel_args: preset-vaapi
@@ -87,6 +89,7 @@
     extraOptions = [
       "--device=/dev/dri/renderD128:/dev/dri/renderD128"
       "--shm-size=256m"
+      "--add-host=host.docker.internal:host-gateway"
     ];
   };
 
@@ -100,7 +103,5 @@
       "/persist/containers/frigate"
       "/data/frigate"
     ];
-    after = [ "sops-nix.service" ];
-    requires = [ "sops-nix.service" ];
   };
 }
