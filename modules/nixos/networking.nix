@@ -81,7 +81,7 @@
         forward_auth localhost:${toString config.mylab.ports.authentik} {
           uri /outpost.goauthentik.io/auth/caddy
           copy_headers X-authentik-username X-authentik-groups X-authentik-email X-authentik-name X-authentik-uid
-          trusted_proxies private_ranges
+          trusted_proxies 127.0.0.1
         }
       }
     '';
