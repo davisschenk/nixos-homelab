@@ -11,6 +11,7 @@ in
     "grafana_oauth_client_secret" = { sopsFile = ../../../secrets/grafana.yaml; };
     "jellyfin_oidc_client_secret" = { sopsFile = ../../../secrets/jellyfin.yaml; };
     "jellyseerr_oidc_client_secret" = { sopsFile = ../../../secrets/jellyseerr.yaml; };
+    "actual_oidc_client_secret" = { sopsFile = ../../../secrets/actual.yaml; };
   };
 
   sops.templates."authentik-env" = {
@@ -23,6 +24,7 @@ in
       GRAFANA_OIDC_CLIENT_SECRET=${config.sops.placeholder."grafana_oauth_client_secret"}
       JELLYFIN_OIDC_CLIENT_SECRET=${config.sops.placeholder."jellyfin_oidc_client_secret"}
       JELLYSEERR_OIDC_CLIENT_SECRET=${config.sops.placeholder."jellyseerr_oidc_client_secret"}
+      ACTUAL_OIDC_CLIENT_SECRET=${config.sops.placeholder."actual_oidc_client_secret"}
     '';
     restartUnits = [
       "authentik.service"

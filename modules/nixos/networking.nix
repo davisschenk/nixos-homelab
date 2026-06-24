@@ -107,7 +107,6 @@
 
         @actual host actual.schenkenberger.dev
         handle @actual {
-          import authentik_forward_auth
           reverse_proxy localhost:${toString config.mylab.ports.actual}
         }
 
