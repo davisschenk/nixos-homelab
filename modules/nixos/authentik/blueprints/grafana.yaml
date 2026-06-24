@@ -29,7 +29,7 @@ entries:
   - model: authentik_providers_oauth2.oauth2provider
     state: present
     identifiers:
-      name: "Grafana OIDC Provider"
+      name: "Grafana Provider"
     attrs:
       authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
       invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
@@ -54,7 +54,7 @@ entries:
       name: "Grafana"
       slug: "grafana"
       icon: "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons@main/png/grafana.png"
-      provider: !Find [authentik_providers_oauth2.oauth2provider, [name, Grafana OIDC Provider]]
+      provider: !Find [authentik_providers_oauth2.oauth2provider, [name, Grafana Provider]]
       policy_engine_mode: any
   - model: authentik_policies.policybinding
     state: present
