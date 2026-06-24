@@ -33,7 +33,6 @@ entries:
       name: "mealie-admin"
     attrs:
       name: "mealie-admin"
-      parent: !Find [authentik_core.group, [name, super-admin]]
 
   - model: authentik_core.group
     state: present
@@ -41,7 +40,6 @@ entries:
       name: "mealie-user"
     attrs:
       name: "mealie-user"
-      parent: !Find [authentik_core.group, [name, super-admin]]
 
   - model: authentik_core.group
     state: present

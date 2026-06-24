@@ -15,8 +15,8 @@ let
   jellyfinBlueprint = pkgs.writeText "jellyfin.yaml" (builtins.readFile ./blueprints/jellyfin.yaml);
   jellyseerrBlueprint = pkgs.writeText "jellyseerr.yaml" (builtins.readFile ./blueprints/jellyseerr.yaml);
   copypartyBlueprint = pkgs.writeText "copyparty.yaml" (builtins.readFile ./blueprints/copyparty.yaml);
+  actualBlueprint = pkgs.writeText "actual.yaml" (builtins.readFile ./blueprints/actual.yaml);
   outpostBlueprint = pkgs.writeText "outpost.yaml" (builtins.readFile ./blueprints/outpost.yaml);
-  superAdminBlueprint = pkgs.writeText "super-admin.yaml" (builtins.readFile ./blueprints/super-admin.yaml);
 
   customBlueprintsDir = pkgs.runCommand "authentik-blueprints" { } ''
     cp -rL ${defaultBlueprintsDir}/. $out/
@@ -34,8 +34,8 @@ let
     cp ${jellyfinBlueprint}     $out/custom/jellyfin.yaml
     cp ${jellyseerrBlueprint}   $out/custom/jellyseerr.yaml
     cp ${copypartyBlueprint}    $out/custom/copyparty.yaml
+    cp ${actualBlueprint}       $out/custom/actual.yaml
     cp ${outpostBlueprint}      $out/custom/outpost.yaml
-    cp ${superAdminBlueprint}   $out/custom/super-admin.yaml
   '';
 in
 {

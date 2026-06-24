@@ -16,6 +16,10 @@ entries:
       redirect_uris:
         - url: "https://romm.schenkenberger.dev/api/oauth/openid"
           matching_mode: strict
+      property_mappings:
+        - !Find [authentik_core.propertymapping, [name, "authentik default OAuth Mapping: OpenID 'openid'"]]
+        - !Find [authentik_core.propertymapping, [name, "authentik default OAuth Mapping: OpenID 'email'"]]
+        - !Find [authentik_core.propertymapping, [name, "authentik default OAuth Mapping: OpenID 'profile'"]]
       sub_mode: hashed_user_id
       include_claims_in_id_token: true
       signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
@@ -50,6 +54,6 @@ entries:
     identifiers:
       target: !Find [authentik_core.application, [slug, romm]]
       group: !Find [authentik_core.group, [name, romm-user]]
-      order: 10
+      order: 20
     attrs:
       enabled: true
