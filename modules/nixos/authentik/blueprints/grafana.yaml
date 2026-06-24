@@ -47,7 +47,7 @@ entries:
     state: present
     identifiers:
       target: !Find [authentik_core.application, [slug, grafana]]
-      group: !Find [authentik_core.group, [name, grafana-admin]]
+      group: !Find [authentik_core.group, [name, super-admin]]
       order: 0
     attrs:
       enabled: true
@@ -55,7 +55,15 @@ entries:
     state: present
     identifiers:
       target: !Find [authentik_core.application, [slug, grafana]]
-      group: !Find [authentik_core.group, [name, grafana-viewer]]
+      group: !Find [authentik_core.group, [name, grafana-admin]]
       order: 10
+    attrs:
+      enabled: true
+  - model: authentik_policies.policybinding
+    state: present
+    identifiers:
+      target: !Find [authentik_core.application, [slug, grafana]]
+      group: !Find [authentik_core.group, [name, grafana-viewer]]
+      order: 20
     attrs:
       enabled: true
