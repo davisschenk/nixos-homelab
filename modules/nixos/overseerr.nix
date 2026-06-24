@@ -6,6 +6,6 @@
   };
 
   environment.persistence."/persist" = {
-    directories = [ "/var/lib/overseerr" ];
+    directories = [ "/var/lib/private/overseerr" ];
   };
 }
