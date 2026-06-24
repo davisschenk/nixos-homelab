@@ -19,6 +19,7 @@ in
   services = {
     prometheus = {
       enable = true;
+      listenAddress = "127.0.0.1";
       port = p.prometheus;
       retentionTime = "30d";
 
@@ -41,6 +42,7 @@ in
 
       exporters.node = {
         enable = true;
+        listenAddress = "127.0.0.1";
         enabledCollectors = [
           "systemd"
           "processes"
