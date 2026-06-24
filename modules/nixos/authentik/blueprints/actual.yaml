@@ -1,6 +1,6 @@
 version: 1
 metadata:
-  name: "Mangrove - Actual Budget OIDC"
+  name: "Mangrove - Actual Budget"
   labels:
     blueprints.goauthentik.io/instantiate: "true"
 entries:
