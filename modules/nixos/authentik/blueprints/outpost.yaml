@@ -14,3 +14,4 @@ entries:
         - !Find [authentik_providers_proxy.proxyprovider, [name, Radarr Provider]]
         - !Find [authentik_providers_proxy.proxyprovider, [name, Prowlarr Provider]]
         - !Find [authentik_providers_proxy.proxyprovider, [name, qBittorrent Provider]]
+        - !Find [authentik_providers_proxy.proxyprovider, [name, Copyparty Provider]]
