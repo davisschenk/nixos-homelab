@@ -150,6 +150,11 @@
           reverse_proxy localhost:${toString config.mylab.ports.jellyfin}
         }
 
+        @seerr host seerr.schenkenberger.dev
+        handle @seerr {
+          reverse_proxy localhost:${toString config.mylab.ports.overseerr}
+        }
+
         @files host files.schenkenberger.dev
         handle @files {
           reverse_proxy localhost:${toString config.mylab.ports.copyparty}

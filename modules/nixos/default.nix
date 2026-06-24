@@ -14,5 +14,6 @@
     ./mealie.nix
     ./actual.nix
     ./backup.nix
+    ./overseerr.nix
   ];
 }

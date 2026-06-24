@@ -76,5 +76,10 @@
       default = 8083;
       description = "Pelican Wings daemon API listen port.";
     };
+    overseerr = lib.mkOption {
+      type = lib.types.port;
+      default = 5055;
+      description = "Overseerr request management listen port.";
+    };
   };
 }
