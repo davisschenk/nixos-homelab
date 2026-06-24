@@ -2,7 +2,7 @@
 {
   sops.secrets."actual_oidc_client_secret" = {
     sopsFile = ../../secrets/actual.yaml;
-    owner = "actual";
+    mode = "0444";
   };
 
   services.actual = {
