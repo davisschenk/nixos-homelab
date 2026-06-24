@@ -30,7 +30,4 @@
     unitConfig.RequiresMountsFor = [ "/persist/containers/jellyseerr" ];
   };
 
-  environment.persistence."/persist" = {
-    directories = [ "/var/lib/docker" ];
-  };
 }
