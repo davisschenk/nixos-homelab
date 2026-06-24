@@ -69,7 +69,7 @@ in
         security.secret_key = "$__file{${config.sops.secrets."grafana_secret_key".path}}";
 
         "auth" = {
-          signout_redirect_url = "https://authentik.schenkenberger.dev/application/o/grafana/end-session/";
+          signout_redirect_url = "https://auth.schenkenberger.dev/application/o/grafana/end-session/";
           oauth_auto_login = true;
         };
 
@@ -80,9 +80,9 @@ in
           client_id = "grafana";
           client_secret = "$__file{${config.sops.secrets."grafana_oauth_client_secret".path}}";
           scopes = "openid profile email groups";
-          auth_url = "https://authentik.schenkenberger.dev/application/o/authorize/";
-          token_url = "https://authentik.schenkenberger.dev/application/o/token/";
-          api_url = "https://authentik.schenkenberger.dev/application/o/userinfo/";
+          auth_url = "https://auth.schenkenberger.dev/application/o/authorize/";
+          token_url = "https://auth.schenkenberger.dev/application/o/token/";
+          api_url = "https://auth.schenkenberger.dev/application/o/userinfo/";
           role_attribute_path = "contains(groups, 'grafana-admin') && 'Admin' || contains(groups, 'grafana-viewer') && 'Viewer' || 'Viewer'";
           allow_assign_grafana_admin = true;
         };
