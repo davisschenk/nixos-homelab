@@ -8,7 +8,6 @@
   };
 
   sops.templates."frigate-config" = {
-    path = "/persist/containers/frigate/config.yml";
     content = ''
       mqtt:
         enabled: true
@@ -80,6 +79,7 @@
     ports = [ "127.0.0.1:${toString config.mylab.ports.frigate}:5000" ];
     volumes = [
       "/persist/containers/frigate:/config"
+      "${config.sops.templates."frigate-config".path}:/config/config.yml:ro"
       "/data/frigate:/media/frigate"
       "/etc/localtime:/etc/localtime:ro"
     ];
