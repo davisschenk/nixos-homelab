@@ -50,10 +50,13 @@ in
 
   };
 
-  systemd.tmpfiles.rules = [
-    "d /var/lib/private/authentik/media/public/branding 0750 authentik authentik - -"
-    "C+ /var/lib/private/authentik/media/public/branding/flow_background.jpg 0640 authentik authentik - ${../../../assets/flow_background.jpg}"
-  ];
+  system.activationScripts.authentik-branding = {
+    text = ''
+      install -d -m 0755 /var/lib/private/authentik/media/public/branding
+      install -m 0644 ${../../../assets/flow_background.jpg} \
+        /var/lib/private/authentik/media/public/branding/flow_background.jpg
+    '';
+  };
 
   environment.persistence."/persist" = {
     directories = [
