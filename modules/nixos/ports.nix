@@ -81,5 +81,10 @@
       default = 5055;
       description = "Jellyseerr request management container host port.";
     };
+    frigate = lib.mkOption {
+      type = lib.types.port;
+      default = 5000;
+      description = "Frigate NVR HTTP listen port.";
+    };
   };
 }

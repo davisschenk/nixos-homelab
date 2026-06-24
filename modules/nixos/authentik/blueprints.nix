@@ -17,6 +17,7 @@ let
   copypartyBlueprint = pkgs.writeText "copyparty.yaml" (builtins.readFile ./blueprints/copyparty.yaml);
   actualBlueprint = pkgs.writeText "actual.yaml" (builtins.readFile ./blueprints/actual.yaml);
   outpostBlueprint = pkgs.writeText "outpost.yaml" (builtins.readFile ./blueprints/outpost.yaml);
+  frigateBlueprint = pkgs.writeText "frigate.yaml" (builtins.readFile ./blueprints/frigate.yaml);
 
   customBlueprintsDir = pkgs.runCommand "authentik-blueprints" { } ''
     cp -rL ${defaultBlueprintsDir}/. $out/
@@ -36,6 +37,7 @@ let
     cp ${copypartyBlueprint}    $out/custom/copyparty.yaml
     cp ${actualBlueprint}       $out/custom/actual.yaml
     cp ${outpostBlueprint}      $out/custom/outpost.yaml
+    cp ${frigateBlueprint}      $out/custom/frigate.yaml
   '';
 in
 {

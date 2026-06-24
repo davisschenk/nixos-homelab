@@ -167,6 +167,12 @@
         handle @panel {
           reverse_proxy localhost:${toString config.mylab.ports.pelican}
         }
+
+        @frigate host frigate.schenkenberger.dev
+        handle @frigate {
+          import authentik_forward_auth
+          reverse_proxy localhost:${toString config.mylab.ports.frigate}
+        }
       '';
     };
   };

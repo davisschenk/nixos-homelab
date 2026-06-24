@@ -15,5 +15,6 @@
     ./actual.nix
     ./backup.nix
     ./overseerr.nix
+    ./frigate.nix
   ];
 }
