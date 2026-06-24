@@ -1,15 +1,10 @@
 keys:
   - &admin age19aesmaqmck97rh3hgswmwas4uflmd4kfx47v5gg57yj58jswccuq0x0vyg
-
-  # HOST KEY — required for the host to decrypt secrets at boot.
-  # After first boot, run:
-  #   ssh-keyscan -t ed25519 mangrove | ssh-to-age
-  # Paste the output below, uncomment, then run: just rekey
-  # - &mangrove age1...
+  - &mangrove age13m2jqa3ddjkffjqu82gk40u42kqdypletd605ax7u3krpfx4sfhq9wq853
 
 creation_rules:
   - path_regex: secrets/.*\.yaml$
     key_groups:
       - age:
           - *admin
-          # - *mangrove  # uncomment after first boot + rekey
+          - *mangrove
