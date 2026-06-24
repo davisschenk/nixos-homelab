@@ -4,18 +4,6 @@ metadata:
   labels:
     blueprints.goauthentik.io/instantiate: "true"
 entries:
-  - model: authentik_core.group
-    state: present
-    identifiers:
-      name: "mealie-user"
-    attrs:
-      name: "mealie-user"
-  - model: authentik_core.group
-    state: present
-    identifiers:
-      name: "mealie-admin"
-    attrs:
-      name: "mealie-admin"
   - model: authentik_providers_oauth2.scopemapping
     state: present
     identifiers:

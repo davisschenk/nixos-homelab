@@ -3,6 +3,7 @@ let
   defaultBlueprintsDir =
     "${config.services.authentik.authentikComponents.staticWorkdirDeps}/blueprints";
 
+  groupsBlueprint = pkgs.writeText "groups.yaml" (builtins.readFile ./blueprints/groups.yaml);
   mealieBlueprint = pkgs.writeText "mealie.yaml" (builtins.readFile ./blueprints/mealie.yaml);
   rommBlueprint = pkgs.writeText "romm.yaml" (builtins.readFile ./blueprints/romm.yaml);
   brandingBlueprint = pkgs.writeText "branding.yaml" (builtins.readFile ./blueprints/branding.yaml);
@@ -18,6 +19,7 @@ let
     cp -rL ${defaultBlueprintsDir}/. $out/
     chmod u+w $out
     mkdir -p $out/custom
+    cp ${groupsBlueprint}                  $out/custom/groups.yaml
     cp ${mealieBlueprint}                  $out/custom/mealie.yaml
     cp ${rommBlueprint}                    $out/custom/romm.yaml
     cp ${brandingBlueprint}                $out/custom/branding.yaml

@@ -11,19 +11,3 @@ entries:
     attrs:
       name: "super-admin"
       is_superuser: true
-
-  - model: authentik_core.group
-    state: present
-    identifiers:
-      name: "mealie-admin"
-    attrs:
-      name: "mealie-admin"
-      parent: !Find [authentik_core.group, [name, super-admin]]
-
-  - model: authentik_core.group
-    state: present
-    identifiers:
-      name: "mealie-user"
-    attrs:
-      name: "mealie-user"
-      parent: !Find [authentik_core.group, [name, super-admin]]
