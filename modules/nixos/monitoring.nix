@@ -83,7 +83,7 @@ in
           auth_url = "https://authentik.schenkenberger.dev/application/o/authorize/";
           token_url = "https://authentik.schenkenberger.dev/application/o/token/";
           api_url = "https://authentik.schenkenberger.dev/application/o/userinfo/";
-          role_attribute_path = "contains(groups, 'super-admin') && 'Admin' || 'Viewer'";
+          role_attribute_path = "contains(groups, 'grafana-admin') && 'Admin' || contains(groups, 'grafana-viewer') && 'Viewer' || 'Viewer'";
           allow_assign_grafana_admin = true;
         };
       };

@@ -137,7 +137,7 @@
         @qbit host qbit.schenkenberger.dev
         handle @qbit {
           import authentik_forward_auth
-          reverse_proxy localhost:${toString config.mylab.ports.qbittorrent}
+          reverse_proxy 192.168.15.1:${toString config.mylab.ports.qbittorrent}
         }
 
         @romm host romm.schenkenberger.dev

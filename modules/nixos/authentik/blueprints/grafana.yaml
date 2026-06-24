@@ -4,6 +4,19 @@ metadata:
   labels:
     blueprints.goauthentik.io/instantiate: "true"
 entries:
+  - model: authentik_core.group
+    state: present
+    identifiers:
+      name: "grafana-admin"
+    attrs:
+      name: "grafana-admin"
+      parent: !Find [authentik_core.group, [name, super-admin]]
+  - model: authentik_core.group
+    state: present
+    identifiers:
+      name: "grafana-viewer"
+    attrs:
+      name: "grafana-viewer"
   - model: authentik_providers_oauth2.scopemapping
     state: present
     identifiers:
@@ -47,7 +60,15 @@ entries:
     state: present
     identifiers:
       target: !Find [authentik_core.application, [slug, grafana]]
-      group: !Find [authentik_core.group, [name, super-admin]]
+      group: !Find [authentik_core.group, [name, grafana-admin]]
       order: 0
+    attrs:
+      enabled: true
+  - model: authentik_policies.policybinding
+    state: present
+    identifiers:
+      target: !Find [authentik_core.application, [slug, grafana]]
+      group: !Find [authentik_core.group, [name, grafana-viewer]]
+      order: 10
     attrs:
       enabled: true
