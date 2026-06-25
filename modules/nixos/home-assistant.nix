@@ -10,6 +10,9 @@ let
       tag = "v1.12";
       hash = "sha256-BPG/G6IM95g9ip2OsPmcAebi2ZvKHUpFzV4oquOFLPM=";
     };
+    # The repo's Makefile default target is lint-fix (calls isort/black/ruff),
+    # which aren't in the build sandbox. Nothing to compile here anyway.
+    dontBuild = true;
   };
 in
 {
