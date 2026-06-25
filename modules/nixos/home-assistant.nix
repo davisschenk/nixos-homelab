@@ -15,7 +15,7 @@
       http = {
         server_port = config.mylab.ports.homeassistant;
         use_x_forwarded_for = true;
-        trusted_proxies = [ "127.0.0.1" ];
+        trusted_proxies = [ "127.0.0.1" "::1" ];
       };
     };
     extraComponents = [
