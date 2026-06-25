@@ -54,6 +54,9 @@
             listen:
               - bark
               - dog
+          zones:
+            full_frame:
+              coordinates: 0,0,1280,0,1280,720,0,720
           onvif:
             host: 10.0.0.162
             port: 2020
@@ -63,7 +66,8 @@
               enabled: true
               calibrate_on_startup: true
               zooming: disabled
-              required_zones: []
+              required_zones:
+                - full_frame
               track:
                 - dog
           record:
