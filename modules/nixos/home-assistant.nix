@@ -1,4 +1,17 @@
-{ config, ... }:
+{ config, pkgs, ... }:
+let
+  auth-header = pkgs.buildHomeAssistantComponent {
+    owner = "BeryJu";
+    domain = "auth_header";
+    version = "1.12";
+    src = pkgs.fetchFromGitHub {
+      owner = "BeryJu";
+      repo = "hass-auth-header";
+      tag = "v1.12";
+      hash = "sha256-r/k7JtsDPANvBeo0gDrrChijPojakDzqQuZtAB8oVew=";
+    };
+  };
+in
 {
   services.mosquitto = {
     enable = true;
@@ -10,6 +23,7 @@
 
   services.home-assistant = {
     enable = true;
+    customComponents = [ auth-header ];
     config = {
       default_config = { };
       http = {
@@ -17,6 +31,13 @@
         use_x_forwarded_for = true;
         trusted_proxies = [ "127.0.0.1" "::1" ];
       };
+      homeassistant.auth_providers = [
+        {
+          type = "auth_header";
+          username_header = "X-Authentik-Username";
+        }
+        { type = "homeassistant"; }
+      ];
     };
     extraComponents = [
       "met"
