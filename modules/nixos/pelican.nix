@@ -91,8 +91,8 @@ in
       };
 
       wings = {
-        enable = false;
-        uuid = "00000000-0000-0000-0000-000000000000";
+        enable = true;
+        uuid = "32011034-c138-4c4f-88be-d7c478faa405";
         remote = "https://panel.schenkenberger.dev";
         tokenIdFile = config.sops.secrets.pelican_token_id.path;
         tokenFile = config.sops.secrets.pelican_token.path;
