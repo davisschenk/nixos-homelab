@@ -1,6 +1,27 @@
-{ config, ... }:
+{ config, pkgs, lib, ... }:
 let
   p = config.mylab.ports;
+
+  # Extract an *arr API key from its config.xml at service startup.
+  # Writes the plain key to /run/exportarr-keys/<name> so that exportarr's
+  # LoadCredential mechanism can read it without touching sops secrets.
+  mkArrKeyExtractor = name: configPath: {
+    "exportarr-${name}-key" = {
+      description = "Extract ${name} API key for exportarr";
+      before = [ "prometheus-exportarr-${name}-exporter.service" ];
+      wantedBy = [ "prometheus-exportarr-${name}-exporter.service" ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStart = pkgs.writeShellScript "extract-${name}-key" ''
+          install -d -m 700 /run/exportarr-keys
+          ${pkgs.xmlstarlet}/bin/xmlstarlet sel -t -v "/Config/ApiKey" \
+            "${configPath}" > /run/exportarr-keys/${name}
+          chmod 600 /run/exportarr-keys/${name}
+        '';
+      };
+    };
+  };
 in
 {
   # Grafana secret key managed via SOPS. The file contains just the raw key
@@ -36,6 +57,18 @@ in
           job_name = "authentik";
           static_configs = [ { targets = [ "localhost:9300" "localhost:9301" ]; } ];
         }
+        {
+          job_name = "sonarr";
+          static_configs = [ { targets = [ "localhost:${toString p.exportarrSonarr}" ]; } ];
+        }
+        {
+          job_name = "radarr";
+          static_configs = [ { targets = [ "localhost:${toString p.exportarrRadarr}" ]; } ];
+        }
+        {
+          job_name = "prowlarr";
+          static_configs = [ { targets = [ "localhost:${toString p.exportarrProwlarr}" ]; } ];
+        }
         # Jellyfin does not expose Prometheus metrics without a separate plugin;
         # removed to avoid scrape errors.
       ];
@@ -56,6 +89,30 @@ in
           "time"
           "pressure"
         ];
+      };
+
+      exporters.exportarr-sonarr = {
+        enable = true;
+        listenAddress = "127.0.0.1";
+        port = p.exportarrSonarr;
+        url = "http://127.0.0.1:${toString p.sonarr}";
+        apiKeyFile = "/run/exportarr-keys/sonarr";
+      };
+
+      exporters.exportarr-radarr = {
+        enable = true;
+        listenAddress = "127.0.0.1";
+        port = p.exportarrRadarr;
+        url = "http://127.0.0.1:${toString p.radarr}";
+        apiKeyFile = "/run/exportarr-keys/radarr";
+      };
+
+      exporters.exportarr-prowlarr = {
+        enable = true;
+        listenAddress = "127.0.0.1";
+        port = p.exportarrProwlarr;
+        url = "http://127.0.0.1:${toString p.prowlarr}";
+        apiKeyFile = "/run/exportarr-keys/prowlarr";
       };
     };
 
@@ -110,6 +167,12 @@ in
     };
 
   };
+
+  systemd.services = lib.mkMerge [
+    (mkArrKeyExtractor "sonarr" "/var/lib/nixarr/sonarr/config.xml")
+    (mkArrKeyExtractor "radarr" "/var/lib/nixarr/radarr/config.xml")
+    (mkArrKeyExtractor "prowlarr" "/var/lib/nixarr/prowlarr/config.xml")
+  ];
 
   environment.persistence."/persist" = {
     directories = [

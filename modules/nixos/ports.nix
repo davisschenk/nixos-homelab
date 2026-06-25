@@ -91,5 +91,20 @@
       default = 8123;
       description = "Home Assistant HTTP listen port.";
     };
+    exportarrSonarr = lib.mkOption {
+      type = lib.types.port;
+      default = 9707;
+      description = "Exportarr Sonarr metrics listen port.";
+    };
+    exportarrRadarr = lib.mkOption {
+      type = lib.types.port;
+      default = 9708;
+      description = "Exportarr Radarr metrics listen port.";
+    };
+    exportarrProwlarr = lib.mkOption {
+      type = lib.types.port;
+      default = 9709;
+      description = "Exportarr Prowlarr metrics listen port.";
+    };
   };
 }
