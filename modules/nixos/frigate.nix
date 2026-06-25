@@ -57,19 +57,21 @@
             port: 2020
             user: "${config.sops.placeholder."frigate_rtsp_username"}"
             password: "${config.sops.placeholder."frigate_rtsp_password"}"
-          autotracking:
-            enabled: true
-            calibrate_on_startup: true
-            zooming: disabled
-            required_zones: []
-            tracked_object: dog
+            autotracking:
+              enabled: true
+              calibrate_on_startup: true
+              zooming: disabled
+              required_zones: []
+              track:
+                - dog
           record:
             enabled: true
-            retain:
+            continuous:
               days: 7
-            events:
+            detections:
               retain:
-                default: 14
+                days: 14
+                mode: all
     '';
   };
 
