@@ -83,7 +83,7 @@ in
         extraEnvironment = {
           OAUTH_AUTHENTIK_ENABLED = "true";
           OAUTH_AUTHENTIK_BASE_URL = "https://auth.schenkenberger.dev";
-          OAUTH_AUTHENTIK_SHOULD_CREATE_MISSING_USERS = "false";
+          OAUTH_AUTHENTIK_SHOULD_CREATE_MISSING_USERS = "true";
           OAUTH_AUTHENTIK_SHOULD_LINK_MISSING_USERS = "true";
         };
         extraEnvironmentFile = config.sops.templates."pelican-extra-env".path;
