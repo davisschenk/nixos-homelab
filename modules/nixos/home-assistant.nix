@@ -8,7 +8,7 @@ let
       owner = "BeryJu";
       repo = "hass-auth-header";
       tag = "v1.12";
-      hash = "sha256-r/k7JtsDPANvBeo0gDrrChijPojakDzqQuZtAB8oVew=";
+      hash = "sha256-BPG/G6IM95g9ip2OsPmcAebi2ZvKHUpFzV4oquOFLPM=";
     };
   };
 in
