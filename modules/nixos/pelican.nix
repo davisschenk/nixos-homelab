@@ -57,7 +57,7 @@ in
       OAUTH_AUTHENTIK_CLIENT_SECRET=${config.sops.placeholder."pelican_oauth_client_secret"}
     '';
     owner = config.services.pelican.panel.user;
-    restartUnits = [ "pelican-panel-setup.service" "pelican-panel-queue.service" ];
+    restartUnits = [ "pelican-panel-setup.service" "pelican-queue.service" ];
   };
 
   services = {
