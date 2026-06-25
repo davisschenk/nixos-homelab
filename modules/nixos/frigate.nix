@@ -18,12 +18,17 @@
       ffmpeg:
         hwaccel_args: preset-vaapi
 
+      model:
+        path: /openvino-model/ssdlite_mobilenet_v2.xml
+        input_tensor: nhwc
+        input_pixel_format: bgr
+        width: 300
+        height: 300
+
       detectors:
         ov:
           type: openvino
           device: AUTO
-          model:
-            path: /openvino-model/ssdlite_mobilenet_v2.xml
 
       cameras:
         hazycam:
