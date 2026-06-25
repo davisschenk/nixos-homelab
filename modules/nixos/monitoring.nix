@@ -100,6 +100,12 @@ in
             isDefault = true;
           }
         ];
+        dashboards.settings.providers = [
+          {
+            name = "default";
+            options.path = ./grafana/dashboards;
+          }
+        ];
       };
     };
 
