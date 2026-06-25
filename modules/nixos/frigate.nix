@@ -8,6 +8,7 @@
   };
 
   sops.templates."frigate-config" = {
+    restartUnits = [ "docker-frigate.service" ];
     content = ''
       mqtt:
         enabled: true
@@ -36,6 +37,7 @@
               - path: "rtsp://${config.sops.placeholder."frigate_rtsp_username"}:${config.sops.placeholder."frigate_rtsp_password"}@10.0.0.162/stream1"
                 roles:
                   - record
+                  - audio
               - path: "rtsp://${config.sops.placeholder."frigate_rtsp_username"}:${config.sops.placeholder."frigate_rtsp_password"}@10.0.0.162/stream2"
                 roles:
                   - detect
