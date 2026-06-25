@@ -23,13 +23,6 @@
           type: openvino
           device: AUTO
 
-      model:
-        path: /config/model_cache/openvino/FP32/ssdlite_mobilenet_v2.xml
-        input_tensor: nhwc
-        input_pixel_format: bgr
-        width: 300
-        height: 300
-
       cameras:
         hazycam:
           ffmpeg:
