@@ -31,7 +31,7 @@ entries:
     attrs:
       name: "Pelican"
       slug: "pelican"
-      icon: "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons@main/png/pelican.png"
+      icon: "https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/png/pelican-panel.png"
       provider: !Find [authentik_providers_oauth2.oauth2provider, [name, Pelican Provider]]
       policy_engine_mode: any
   - model: authentik_policies.policybinding
