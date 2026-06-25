@@ -31,6 +31,14 @@ in
       inherit sopsFile;
       owner = config.services.pelican.panel.user;
     };
+    pelican_oauth_client_id = {
+      inherit sopsFile;
+      owner = config.services.pelican.panel.user;
+    };
+    pelican_oauth_client_secret = {
+      inherit sopsFile;
+      owner = config.services.pelican.panel.user;
+    };
     "mail_username" = {
       sopsFile = mailSopsFile;
       owner = config.services.pelican.panel.user;
@@ -41,10 +49,12 @@ in
     };
   };
 
-  sops.templates."pelican-mail-env" = {
+  sops.templates."pelican-extra-env" = {
     content = ''
       MAIL_USERNAME=${config.sops.placeholder."mail_username"}
       MAIL_PASSWORD=${config.sops.placeholder."mail_password"}
+      OAUTH_AUTHENTIK_CLIENT_ID=${config.sops.placeholder."pelican_oauth_client_id"}
+      OAUTH_AUTHENTIK_CLIENT_SECRET=${config.sops.placeholder."pelican_oauth_client_secret"}
     '';
     owner = config.services.pelican.panel.user;
     restartUnits = [ "pelican-panel-setup.service" "pelican-panel-queue.service" ];
@@ -70,7 +80,13 @@ in
           fromAddress = "pelican@schenkenberger.dev";
           fromName = "Pelican";
         };
-        extraEnvironmentFile = config.sops.templates."pelican-mail-env".path;
+        extraEnvironment = {
+          OAUTH_AUTHENTIK_ENABLED = "true";
+          OAUTH_AUTHENTIK_BASE_URL = "https://auth.schenkenberger.dev";
+          OAUTH_AUTHENTIK_SHOULD_CREATE_MISSING_USERS = "false";
+          OAUTH_AUTHENTIK_SHOULD_LINK_MISSING_USERS = "true";
+        };
+        extraEnvironmentFile = config.sops.templates."pelican-extra-env".path;
         enableNginx = true;
       };
 

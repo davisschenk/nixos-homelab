@@ -12,6 +12,8 @@ in
     "jellyfin_oidc_client_secret" = { sopsFile = ../../../secrets/jellyfin.yaml; };
     "jellyseerr_oidc_client_secret" = { sopsFile = ../../../secrets/jellyseerr.yaml; };
     "actual_oidc_client_secret" = { sopsFile = ../../../secrets/actual.yaml; };
+    "pelican_oauth_client_id" = { sopsFile = ../../../secrets/pelican.yaml; };
+    "pelican_oauth_client_secret" = { sopsFile = ../../../secrets/pelican.yaml; };
   };
 
   sops.templates."authentik-env" = {
@@ -25,6 +27,8 @@ in
       JELLYFIN_OIDC_CLIENT_SECRET=${config.sops.placeholder."jellyfin_oidc_client_secret"}
       JELLYSEERR_OIDC_CLIENT_SECRET=${config.sops.placeholder."jellyseerr_oidc_client_secret"}
       ACTUAL_OIDC_CLIENT_SECRET=${config.sops.placeholder."actual_oidc_client_secret"}
+      PELICAN_OAUTH_CLIENT_ID=${config.sops.placeholder."pelican_oauth_client_id"}
+      PELICAN_OAUTH_CLIENT_SECRET=${config.sops.placeholder."pelican_oauth_client_secret"}
     '';
     restartUnits = [
       "authentik.service"

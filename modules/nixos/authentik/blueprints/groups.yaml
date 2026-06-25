@@ -64,3 +64,11 @@ entries:
     attrs:
       name: "romm-user"
 
+  - model: authentik_core.group
+    state: present
+    identifiers:
+      name: "pelican-admin"
+    attrs:
+      name: "pelican-admin"
+      parent: !Find [authentik_core.group, [name, super-admin]]
+
