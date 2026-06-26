@@ -18,5 +18,6 @@
     ./overseerr.nix
     ./frigate.nix
     ./home-assistant.nix
+    ./security.nix
   ];
 }

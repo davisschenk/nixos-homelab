@@ -160,6 +160,11 @@ in
             url = "http://localhost:${toString p.prometheus}";
             isDefault = true;
           }
+          {
+            name = "Loki";
+            type = "loki";
+            url = "http://localhost:${toString p.loki}";
+          }
         ];
         dashboards.settings.providers = [
           {

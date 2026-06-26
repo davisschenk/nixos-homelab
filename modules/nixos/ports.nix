@@ -126,5 +126,10 @@
       default = 2022;
       description = "Pelican Wings SFTP listen port.";
     };
+    loki = lib.mkOption {
+      type = lib.types.port;
+      default = 3100;
+      description = "Grafana Loki log aggregation HTTP listen port.";
+    };
   };
 }
