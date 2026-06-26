@@ -143,6 +143,8 @@
   ];
   systemd.services."systemd-tmpfiles-resetup".serviceConfig.RemainAfterExit = lib.mkForce false;
 
+  zramSwap.enable = true;
+
   nix = {
     settings = {
       experimental-features = [
