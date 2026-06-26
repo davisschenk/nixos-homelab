@@ -106,13 +106,13 @@
                 (pkgs.writeShellScriptBin "install-mangrove" ''
                   set -euo pipefail
                   echo "==> Installing mangrove from github:davisschenk/nixos-homelab#mangrove"
-                  echo "==> This will ERASE /dev/nvme0n1 and /dev/sda. Ctrl-C to abort."
+                  echo "==> This will ERASE nvme-Samsung_SSD_980_PRO_2TB_S76ENL0XB05058E and ata-ST8000DM004-2U9188_ZR162NST. Ctrl-C to abort."
                   read -rp "Press Enter to continue..."
                   sudo ${disko.packages.${system}.disko-install}/bin/disko-install \
                     --mode destroy \
                     --flake "github:davisschenk/nixos-homelab#mangrove" \
-                    --disk nvme /dev/nvme0n1 \
-                    --disk hdd /dev/sda
+                    --disk nvme /dev/disk/by-id/nvme-Samsung_SSD_980_PRO_2TB_S76ENL0XB05058E \
+                    --disk hdd /dev/disk/by-id/ata-ST8000DM004-2U9188_ZR162NST
                   echo "==> Done. You may now reboot."
                 '')
               ];

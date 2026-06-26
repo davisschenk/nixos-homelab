@@ -4,7 +4,7 @@ _:
     disk = {
       nvme = {
         type = "disk";
-        device = "/dev/nvme0n1";
+        device = "/dev/disk/by-id/nvme-Samsung_SSD_980_PRO_2TB_S76ENL0XB05058E";
         content = {
           type = "gpt";
           partitions = {
@@ -72,7 +72,7 @@ _:
 
       hdd = {
         type = "disk";
-        device = "/dev/sda";
+        device = "/dev/disk/by-id/ata-ST8000DM004-2U9188_ZR162NST";
         content = {
           type = "gpt";
           partitions = {
