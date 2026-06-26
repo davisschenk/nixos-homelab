@@ -186,10 +186,20 @@ in
   # ---------------------------------------------------------------------------
   # Persistence — survive impermanence reboots
   # ---------------------------------------------------------------------------
+
+  # Impermanence creates bind-mount source dirs as root:root 0755.
+  # Loki runs as the 'loki' system user and needs to own its state dir.
+  # Suricata runs as 'suricata'; its module sets up /var/log/suricata itself,
+  # but we ensure the persist source dir is also correctly owned.
+  systemd.tmpfiles.rules = [
+    "d /persist/var/lib/loki 0700 loki loki -"
+    "d /persist/var/log/suricata 0755 suricata suricata -"
+  ];
+
   environment.persistence."/persist" = {
     directories = [
-      "/var/lib/loki"
-      "/var/log/suricata"
+      { directory = "/var/lib/loki"; user = "loki"; group = "loki"; mode = "0700"; }
+      { directory = "/var/log/suricata"; user = "suricata"; group = "suricata"; mode = "0755"; }
     ];
   };
 }
