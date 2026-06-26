@@ -13,7 +13,7 @@
       mqtt:
         enabled: true
         host: host.docker.internal
-        port: 1883
+        port: ${toString config.mylab.ports.mosquitto}
 
       ffmpeg:
         hwaccel_args: preset-vaapi
@@ -107,6 +107,8 @@
   ];
 
   systemd.services."docker-frigate" = {
+    after = [ "mosquitto.service" ];
+    wants = [ "mosquitto.service" ];
     unitConfig.RequiresMountsFor = [
       "/persist/containers/frigate"
       "/data/frigate"

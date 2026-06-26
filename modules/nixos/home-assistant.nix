@@ -19,7 +19,8 @@ in
   services.mosquitto = {
     enable = true;
     listeners = [{
-      port = 1883;
+      address = "127.0.0.1";
+      port = config.mylab.ports.mosquitto;
       settings.allow_anonymous = true;
     }];
   };
@@ -30,6 +31,7 @@ in
     config = {
       default_config = { };
       http = {
+        server_host = "127.0.0.1";
         server_port = config.mylab.ports.homeassistant;
         use_x_forwarded_for = true;
         trusted_proxies = [ "127.0.0.1" "::1" ];
@@ -47,6 +49,11 @@ in
       "radio_browser"
       "mqtt"
     ];
+  };
+
+  systemd.services.home-assistant = {
+    after = [ "mosquitto.service" ];
+    wants = [ "mosquitto.service" ];
   };
 
   environment.persistence."/persist" = {
