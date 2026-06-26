@@ -2,7 +2,6 @@
 {
   sops.secrets."actual_oidc_client_secret" = {
     sopsFile = ../../secrets/actual.yaml;
-    mode = "0444";
   };
 
   services.actual = {
@@ -11,7 +10,7 @@
       hostname = "127.0.0.1";
       port = config.mylab.ports.actual;
       loginMethod = "openid";
-      trustedProxies = [ "127.0.0.1" ];
+      trustedProxies = [ "127.0.0.1" "::1" ];
       openId = {
         discoveryURL = "https://auth.schenkenberger.dev/application/o/actual/";
         client_id = "actual";
