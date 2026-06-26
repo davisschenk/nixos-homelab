@@ -20,6 +20,9 @@
   ];
 
   environment.persistence."/persist" = {
-    directories = [ "/var/lib/jellyfin" ];
+    directories = [
+      "/var/lib/jellyfin"
+      "/var/cache/jellyfin"
+    ];
   };
 }
