@@ -3,8 +3,11 @@ let
   setAuthExternal = stateDir: pkgs.writeShellScript "set-auth-external" ''
     config="${stateDir}/config.xml"
     if [ -f "$config" ]; then
+      # Delete any existing node then insert a fresh one so this works on
+      # both first boot (node absent) and subsequent boots (node present).
       ${pkgs.xmlstarlet}/bin/xmlstarlet ed --inplace \
-        -u "/Config/AuthenticationMethod" -v "External" \
+        -d "/Config/AuthenticationMethod" \
+        -s "/Config" -t elem -n "AuthenticationMethod" -v "External" \
         "$config"
     fi
   '';
@@ -40,19 +43,22 @@ in
   systemd.services = {
     sonarr = {
       unitConfig.RequiresMountsFor = [ "/data/media" "/data/downloads" ];
-      serviceConfig.ExecStartPre = [ (setAuthExternal "/var/lib/nixarr/sonarr") ];
+      serviceConfig.ExecStartPre = [ (setAuthExternal config.nixarr.sonarr.stateDir) ];
     };
     radarr = {
       unitConfig.RequiresMountsFor = [ "/data/media" "/data/downloads" ];
-      serviceConfig.ExecStartPre = [ (setAuthExternal "/var/lib/nixarr/radarr") ];
+      serviceConfig.ExecStartPre = [ (setAuthExternal config.nixarr.radarr.stateDir) ];
     };
     prowlarr = {
       unitConfig.RequiresMountsFor = [ "/data/downloads" ];
-      serviceConfig.ExecStartPre = [ (setAuthExternal "/var/lib/nixarr/prowlarr") ];
+      serviceConfig.ExecStartPre = [ (setAuthExternal config.nixarr.prowlarr.stateDir) ];
     };
     qbittorrent.unitConfig.RequiresMountsFor = [ "/data/downloads" ];
   };
 
+  # nixarr only adds a portMapping for qui.internalPort when qui.enable=true.
+  # With qui.enable=false, nixarr adds no webuiPort mapping, so this entry is
+  # load-bearing and must be kept here.
   vpnNamespaces.wg.portMappings = [
     {
       from = config.mylab.ports.qbittorrent;
