@@ -97,7 +97,7 @@ in
         tokenIdFile = config.sops.secrets.pelican_token_id.path;
         tokenFile = config.sops.secrets.pelican_token.path;
         api = {
-          host = "127.0.0.1";
+          host = "0.0.0.0";
           port = config.mylab.ports.wings;
         };
         openFirewall = false;

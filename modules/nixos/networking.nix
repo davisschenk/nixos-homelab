@@ -180,6 +180,11 @@ in
           reverse_proxy localhost:${toString config.mylab.ports.pelican}
         }
 
+        @wings host wings.schenkenberger.dev
+        handle @wings {
+          reverse_proxy localhost:${toString config.mylab.ports.wings}
+        }
+
         @frigate host frigate.schenkenberger.dev
         handle @frigate {
           import authentik_forward_auth
