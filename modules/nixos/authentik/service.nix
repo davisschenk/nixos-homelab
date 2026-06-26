@@ -14,6 +14,10 @@ in
     "actual_oidc_client_secret" = { sopsFile = ../../../secrets/actual.yaml; };
     "pelican_oauth_client_id" = { sopsFile = ../../../secrets/pelican.yaml; };
     "pelican_oauth_client_secret" = { sopsFile = ../../../secrets/pelican.yaml; };
+    # Declared here so the authentik-env template is self-contained; mealie.nix and
+    # romm.nix keep their own declarations (sops-nix merges duplicates harmlessly).
+    "mealie_oidc_client_secret" = { sopsFile = ../../../secrets/mealie.yaml; };
+    "romm_oidc_client_secret" = { sopsFile = ../../../secrets/romm.yaml; };
   };
 
   sops.templates."authentik-env" = {
@@ -33,6 +37,9 @@ in
     restartUnits = [
       "authentik.service"
       "authentik-worker.service"
+      "authentik-ldap.service"
+      "authentik-proxy.service"
+      "authentik-radius.service"
     ];
   };
 
