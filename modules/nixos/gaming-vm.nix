@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ config, pkgs, lib, ... }:
 {
   boot.kernelParams = [
     "intel_iommu=on"
@@ -31,6 +31,13 @@
   # use a host credential secret on a non-encrypted-at-rest filesystem.
   # TODO: re-evaluate and remove this workaround when systemd >= 261 is deployed.
   systemd.services.libvirtd.serviceConfig.LoadCredentialEncrypted = "";
+
+  assertions = [
+    {
+      assertion = lib.versionOlder config.systemd.package.version "261";
+      message = "gaming-vm: remove LoadCredentialEncrypted workaround — systemd >= 261 is now deployed";
+    }
+  ];
 
   environment.persistence."/persist" = {
     directories = [ "/var/lib/libvirt" ];
