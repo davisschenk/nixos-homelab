@@ -59,7 +59,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(f2b_banned_ip_count)",
+          "expr": "sum(f2b_jail_banned_current)",
           "legendFormat": "Banned IPs",
           "refId": "A"
         }
@@ -98,7 +98,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(f2b_failed_current)",
+          "expr": "sum(f2b_jail_failed_current)",
           "legendFormat": "Failing",
           "refId": "A"
         }
@@ -135,7 +135,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(f2b_banned_total)",
+          "expr": "sum(f2b_jail_banned_total)",
           "legendFormat": "Total bans",
           "refId": "A"
         }
@@ -172,7 +172,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "sum(f2b_failed_total)",
+          "expr": "sum(f2b_jail_failed_total)",
           "legendFormat": "Total failures",
           "refId": "A"
         }
@@ -240,28 +240,28 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "f2b_banned_ip_count",
+          "expr": "f2b_jail_banned_current",
           "legendFormat": "{{jail}}",
           "instant": true,
           "refId": "A"
         },
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "f2b_failed_current",
+          "expr": "f2b_jail_failed_current",
           "legendFormat": "{{jail}}",
           "instant": true,
           "refId": "B"
         },
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "f2b_banned_total",
+          "expr": "f2b_jail_banned_total",
           "legendFormat": "{{jail}}",
           "instant": true,
           "refId": "C"
         },
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "f2b_failed_total",
+          "expr": "f2b_jail_failed_total",
           "legendFormat": "{{jail}}",
           "instant": true,
           "refId": "D"
@@ -333,7 +333,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "f2b_banned_ip_count",
+          "expr": "f2b_jail_banned_current",
           "legendFormat": "{{jail}}",
           "refId": "A"
         }
@@ -373,7 +373,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "f2b_failed_current",
+          "expr": "f2b_jail_failed_current",
           "legendFormat": "{{jail}}",
           "refId": "A"
         }
@@ -413,7 +413,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "f2b_banned_total",
+          "expr": "f2b_jail_banned_total",
           "legendFormat": "{{jail}}",
           "refId": "A"
         }
@@ -497,7 +497,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "${datasource}" },
-          "expr": "f2b_errors_total",
+          "expr": "sum(f2b_errors)",
           "legendFormat": "Errors",
           "refId": "A"
         }
