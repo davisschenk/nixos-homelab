@@ -3,6 +3,10 @@
   pkgs,
   ...
 }:
+let
+  # nixarr VPN namespace host-side gateway — see nixarr vpnNamespace subnet config
+  nixarrVpnGateway = "192.168.15.1";
+in
 {
   # ---------------------------------------------------------------------------
   # Cloudflare Tunnel — sole public ingress, no ports need to be opened
@@ -136,7 +140,7 @@
         @qbit host qbit.schenkenberger.dev
         handle @qbit {
           import authentik_forward_auth
-          reverse_proxy 192.168.15.1:${toString config.mylab.ports.qbittorrent}
+          reverse_proxy ${nixarrVpnGateway}:${toString config.mylab.ports.qbittorrent}
         }
 
         @romm host romm.schenkenberger.dev
@@ -166,11 +170,6 @@
         @panel host panel.schenkenberger.dev
         handle @panel {
           reverse_proxy localhost:${toString config.mylab.ports.pelican}
-        }
-
-        @wings host wings.schenkenberger.dev
-        handle @wings {
-          reverse_proxy localhost:${toString config.mylab.ports.wings}
         }
 
         @frigate host frigate.schenkenberger.dev
