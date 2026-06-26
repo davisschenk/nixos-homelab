@@ -23,27 +23,27 @@ in
       inherit sopsFile;
       owner = config.services.pelican.wings.user;
     };
-    pelican_app_key = {
+    pelican_app_key = lib.mkIf config.services.pelican.panel.enable {
       inherit sopsFile;
       owner = config.services.pelican.panel.user;
     };
-    pelican_db_password = {
+    pelican_db_password = lib.mkIf config.services.pelican.panel.enable {
       inherit sopsFile;
       owner = config.services.pelican.panel.user;
     };
-    pelican_oauth_client_id = {
+    pelican_oauth_client_id = lib.mkIf config.services.pelican.panel.enable {
       inherit sopsFile;
       owner = config.services.pelican.panel.user;
     };
-    pelican_oauth_client_secret = {
+    pelican_oauth_client_secret = lib.mkIf config.services.pelican.panel.enable {
       inherit sopsFile;
       owner = config.services.pelican.panel.user;
     };
-    "mail_username" = {
+    "mail_username" = lib.mkIf config.services.pelican.panel.enable {
       sopsFile = mailSopsFile;
       owner = config.services.pelican.panel.user;
     };
-    "mail_password" = {
+    "mail_password" = lib.mkIf config.services.pelican.panel.enable {
       sopsFile = mailSopsFile;
       owner = config.services.pelican.panel.user;
     };
@@ -129,7 +129,7 @@ in
   ];
 
   # Only open Wings SFTP port (2022) when Wings is actually enabled
-  networking.firewall.allowedTCPPorts = lib.mkIf config.services.pelican.wings.enable [ 2022 ];
+  networking.firewall.allowedTCPPorts = lib.mkIf config.services.pelican.wings.enable [ config.mylab.ports.wingsSftp ];
 
   environment.persistence."/persist" = {
     directories = [
