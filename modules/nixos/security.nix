@@ -11,9 +11,12 @@ in
   services.suricata = {
     enable = true;
     disabledRules = [
-      # modbus / dnp3 app-layer protocols not compiled into this build
+      # modbus / dnp3 app-layer protocols not compiled into this Suricata build
+      "2009286"
       "2250001" "2250002" "2250003" "2250005" "2250006"
-      "2250007" "2250008" "2250009" "2270005" "2270006"
+      "2250007" "2250008" "2250009"
+      "2270000" "2270001" "2270002" "2270003" "2270004"
+      "2270005" "2270006"
     ];
     settings = {
       "af-packet" = [
