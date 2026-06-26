@@ -422,6 +422,105 @@
     {
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 31 },
+      "id": 104,
+      "title": "Banned IP Map",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "loki", "uid": "${loki_datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "custom": { "hideFrom": { "legend": false, "tooltip": false, "viz": false } },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 5 },
+              { "color": "orange", "value": 20 },
+              { "color": "dark-red", "value": 50 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 14, "w": 16, "x": 0, "y": 32 },
+      "id": 40,
+      "options": {
+        "basemap": { "config": {}, "name": "Layer 0", "type": "default" },
+        "controls": {
+          "mouseWheelZoom": true,
+          "showAttribution": false,
+          "showDebug": false,
+          "showScale": false,
+          "showZoom": true
+        },
+        "layers": [
+          {
+            "config": {
+              "showLegend": true,
+              "style": {
+                "color": { "fixed": "dark-red" },
+                "opacity": 0.7,
+                "size": { "fixed": 8, "max": 20, "min": 4 },
+                "symbol": { "fixed": "img/icons/marker/circle.svg", "mode": "fixed" }
+              }
+            },
+            "location": { "lookup": "banned_ip", "mode": "lookup" },
+            "name": "Banned IPs",
+            "tooltip": true,
+            "type": "markers"
+          }
+        ],
+        "view": { "id": "coords", "lat": 20, "lon": 0, "zoom": 2 }
+      },
+      "title": "Banned IP Locations",
+      "type": "geomap",
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "${loki_datasource}" },
+          "expr": "sum by (banned_ip) (count_over_time({job=\"fail2ban-bans\"}[$__range]))",
+          "legendFormat": "{{banned_ip}}",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "labelsToFields",
+          "options": { "mode": "columns" }
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "loki", "uid": "${loki_datasource}" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 14, "w": 8, "x": 16, "y": 32 },
+      "id": 41,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "title": "Recent Ban Events",
+      "type": "logs",
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "${loki_datasource}" },
+          "expr": "{job=\"fail2ban-bans\"}",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 46 },
       "id": 103,
       "title": "Exporter Health",
       "type": "row"
@@ -445,7 +544,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 32 },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 47 },
       "id": 30,
       "options": {
         "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
@@ -482,7 +581,7 @@
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 32 },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 47 },
       "id": 31,
       "options": {
         "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
@@ -514,11 +613,24 @@
         "current": {},
         "hide": 0,
         "includeAll": false,
-        "label": "Datasource",
+        "label": "Prometheus",
         "multi": false,
         "name": "datasource",
         "options": [],
         "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      },
+      {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Loki",
+        "multi": false,
+        "name": "loki_datasource",
+        "options": [],
+        "query": "loki",
         "refresh": 1,
         "regex": "",
         "type": "datasource"

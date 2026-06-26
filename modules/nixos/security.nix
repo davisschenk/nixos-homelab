@@ -95,8 +95,10 @@ in
       ];
       limits_config = {
         retention_period = "30d";
-        ingestion_rate_mb = 4;
-        ingestion_burst_size_mb = 8;
+        reject_old_samples = true;
+        reject_old_samples_max_age = "168h";
+        ingestion_rate_mb = 8;
+        ingestion_burst_size_mb = 16;
       };
       compactor = {
         retention_enabled = true;
@@ -125,7 +127,7 @@ in
         suricata_eve = {
           type = "file";
           include = [ "/var/log/suricata/eve.json" ];
-          read_from = "beginning";
+          read_from = "end";
         };
       };
 
@@ -153,6 +155,22 @@ in
             .unit = string(._SYSTEMD_UNIT) ?? string(.SYSLOG_IDENTIFIER) ?? "unknown"
           '';
         };
+
+        parse_f2b_ban = {
+          type = "remap";
+          inputs = [ "systemd_journal" ];
+          source = ''
+            .unit = string(._SYSTEMD_UNIT) ?? string(.SYSLOG_IDENTIFIER) ?? "unknown"
+            if .unit != "fail2ban.service" { abort }
+            msg = string(.MESSAGE) ?? ""
+            jail_match = parse_regex(msg, r'^.*\[(?P<jail>[^\]]+)\] Ban (?P<ip>[\d\.a-fA-F:]+)') ??
+                         parse_regex(msg, r'^.*\] Ban (?P<ip>[\d\.a-fA-F:]+)')
+            if is_null(jail_match) { abort }
+            .banned_ip = string(jail_match.ip) ?? ""
+            .jail = string(jail_match.jail) ?? "unknown"
+            if .banned_ip == "" { abort }
+          '';
+        };
       };
 
       sinks = {
@@ -165,6 +183,19 @@ in
             job = "suricata";
             host = "mangrove";
             event_type = "{{ event_type }}";
+          };
+        };
+
+        loki_f2b_bans = {
+          type = "loki";
+          inputs = [ "parse_f2b_ban" ];
+          endpoint = "http://127.0.0.1:${toString p.loki}";
+          encoding.codec = "json";
+          labels = {
+            job = "fail2ban-bans";
+            host = "mangrove";
+            jail = "{{ jail }}";
+            banned_ip = "{{ banned_ip }}";
           };
         };
 
