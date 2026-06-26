@@ -163,11 +163,11 @@ in
             .unit = string(._SYSTEMD_UNIT) ?? string(.SYSLOG_IDENTIFIER) ?? "unknown"
             if .unit != "fail2ban.service" { abort }
             msg = string(.MESSAGE) ?? ""
-            jail_match = parse_regex(msg, r'^.*\[(?P<jail>[^\]]+)\] Ban (?P<ip>[\d\.a-fA-F:]+)') ??
-                         parse_regex(msg, r'^.*\] Ban (?P<ip>[\d\.a-fA-F:]+)')
-            if is_null(jail_match) { abort }
-            .banned_ip = string(jail_match.ip) ?? ""
-            .jail = string(jail_match.jail) ?? "unknown"
+            m = parse_regex(msg, r'^\S+\s+\[(?P<jail>[^\]]+)\]\s+Ban\s+(?P<ip>[\d\.a-fA-F:]+)') ??
+                parse_regex(msg, r'Ban\s+(?P<ip>[\d\.a-fA-F:]+)')
+            if is_null(m) { abort }
+            .banned_ip = string(get!(m, ["ip"]))
+            .jail = string(get(m, ["jail"]) ?? "unknown") ?? "unknown"
             if .banned_ip == "" { abort }
           '';
         };
