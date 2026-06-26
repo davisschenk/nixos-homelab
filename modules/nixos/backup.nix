@@ -53,11 +53,10 @@ in
     mysql = commonSettings // {
       backupPrepareCommand = ''
         mkdir -p /var/backup/mysql
-        su -s /bin/sh mysql \
-          -c "${pkgs.mariadb}/bin/mysqldump \
-            --all-databases \
-            --single-transaction \
-            --result-file=/var/backup/mysql/all.sql"
+        ${pkgs.docker}/bin/docker exec romm-db \
+          sh -c "mysqldump -u romm-user -p\"$MYSQL_PASSWORD\" \
+            --all-databases --single-transaction" \
+          > /var/backup/mysql/all.sql
       '';
       paths = [ "/var/backup/mysql" ];
       timerConfig = {
@@ -69,7 +68,12 @@ in
 
   # Ensure the persist job (03:00) always runs after the db dump jobs (02:00/02:30)
   # even when Persistent=true causes catch-up runs after a missed boot.
+  # wants= pulls in the dump jobs in the same transaction so after= can enforce ordering.
   systemd.services."restic-backups-persist".after = [
+    "restic-backups-postgresql.service"
+    "restic-backups-mysql.service"
+  ];
+  systemd.services."restic-backups-persist".wants = [
     "restic-backups-postgresql.service"
     "restic-backups-mysql.service"
   ];
