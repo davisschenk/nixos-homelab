@@ -106,5 +106,25 @@
       default = 9709;
       description = "Exportarr Prowlarr metrics listen port.";
     };
+    authentikMetrics = lib.mkOption {
+      type = lib.types.port;
+      default = 9300;
+      description = "Authentik server Prometheus metrics listen port.";
+    };
+    authentikOutpostMetrics = lib.mkOption {
+      type = lib.types.port;
+      default = 9301;
+      description = "Authentik embedded outpost Prometheus metrics listen port.";
+    };
+    mosquitto = lib.mkOption {
+      type = lib.types.port;
+      default = 1883;
+      description = "Mosquitto MQTT broker listen port.";
+    };
+    wingsSftp = lib.mkOption {
+      type = lib.types.port;
+      default = 2022;
+      description = "Pelican Wings SFTP listen port.";
+    };
   };
 }

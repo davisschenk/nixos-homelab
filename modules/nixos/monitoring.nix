@@ -8,6 +8,8 @@ let
   mkArrKeyExtractor = name: configPath: {
     "exportarr-${name}-key" = {
       description = "Extract ${name} API key for exportarr";
+      after = [ "${name}.service" ];
+      requires = [ "${name}.service" ];
       before = [ "prometheus-exportarr-${name}-exporter.service" ];
       wantedBy = [ "prometheus-exportarr-${name}-exporter.service" ];
       serviceConfig = {
@@ -55,7 +57,7 @@ in
         }
         {
           job_name = "authentik";
-          static_configs = [ { targets = [ "localhost:9300" "localhost:9301" ]; } ];
+          static_configs = [ { targets = [ "localhost:${toString p.authentikMetrics}" "localhost:${toString p.authentikOutpostMetrics}" ]; } ];
         }
         {
           job_name = "sonarr";
@@ -76,6 +78,7 @@ in
       exporters.node = {
         enable = true;
         listenAddress = "127.0.0.1";
+        port = p.nodeExporter;
         enabledCollectors = [
           "systemd"
           "processes"
@@ -130,6 +133,7 @@ in
         "auth" = {
           signout_redirect_url = "https://auth.schenkenberger.dev/application/o/grafana/end-session/";
           oauth_auto_login = true;
+          disable_login_form = true;
         };
 
         "auth.generic_oauth" = {
