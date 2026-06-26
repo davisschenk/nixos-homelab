@@ -11,6 +11,11 @@
   services.jellyfin = {
     enable = true;
     openFirewall = false;
+    hardwareAcceleration = {
+      enable = true;
+      device = "/dev/dri/renderD128";
+    };
+    forceEncodingConfig = true;
   };
 
   users.users.jellyfin.extraGroups = [
