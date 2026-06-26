@@ -43,7 +43,7 @@
   networking.firewall = {
     enable = true;
     allowedTCPPorts = [ 22 ];
-    allowedUDPPorts = [ 5353 ];
+    # UDP 5353 is opened by services.avahi.openFirewall = true (the default)
   };
 
   services.avahi = {
@@ -77,7 +77,6 @@
       description = "Wipe / btrfs subvolume on each boot";
       wantedBy = [ "initrd.target" ];
       after = [
-        "systemd-cryptsetup.target"
         "dev-nvme0n1p2.device"
       ];
       requires = [ "dev-nvme0n1p2.device" ];
@@ -126,6 +125,8 @@
 
   # /persist itself must survive — it's on @persist subvolume, not wiped
   fileSystems."/persist".neededForBoot = true;
+  # @log subvolume must be mounted before the journal starts writing
+  fileSystems."/var/log".neededForBoot = true;
 
   # sops-nix decrypts secrets using the SSH host key at boot (auto-imported from
   # services.openssh.hostKeys). No explicit age.keyFile needed.
