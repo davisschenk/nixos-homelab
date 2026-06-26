@@ -8,6 +8,7 @@
     ./arr.nix
     ./monitoring.nix
     ./copyparty.nix
+    ./docker.nix
     ./romm.nix
     ./pelican.nix
     ./gaming-vm.nix
