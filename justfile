@@ -17,9 +17,10 @@ bootstrap-age-key:
     : "${BWS_ACCESS_TOKEN:?BWS_ACCESS_TOKEN must be set}"
     mkdir -p "$HOME/.config/sops/age"
     KEY=$(bws secret get d98f3097-9550-4025-8108-b451002ce98a --output json | python3 -c "import json,sys; print(json.load(sys.stdin)['value'])")
+    PUBKEY=$(echo "$KEY" | age-keygen -y)
     {
       echo "# created by: just bootstrap-age-key"
-      echo "# public key: age19aesmaqmck97rh3hgswmwas4uflmd4kfx47v5gg57yj58jswccuq0x0vyg"
+      echo "# public key: $PUBKEY"
       echo "$KEY"
     } > "$HOME/.config/sops/age/keys.txt"
     chmod 600 "$HOME/.config/sops/age/keys.txt"
@@ -27,7 +28,7 @@ bootstrap-age-key:
 
 # ── SOPS ──────────────────────────────────────────────────────────────────────
 
-sops := "nix --extra-experimental-features nix-command --extra-experimental-features flakes shell nixpkgs#sops --command sops"
+sops := "nix --extra-experimental-features 'nix-command flakes' shell nixpkgs#sops --command sops"
 nixos_rebuild := "nix --extra-experimental-features 'nix-command flakes' run nixpkgs#nixos-rebuild --"
 
 # Edit or create a secret file (e.g. `just edit authentik`)
@@ -62,20 +63,18 @@ setup-host-key:
 rekey:
     #!/usr/bin/env bash
     set -euo pipefail
-    sops="nix --extra-experimental-features nix-command --extra-experimental-features flakes shell nixpkgs#sops --command sops"
     for f in {{secrets_dir}}/*.yaml; do
-        [[ "$(basename "$f")" == ".sops.yaml" ]] && continue
         echo "Rekeying $f..."
-        $sops updatekeys --yes "$f"
+        {{sops}} updatekeys --yes "$f"
     done
 
 # Check that all secret files are SOPS-encrypted (have sops metadata)
 # Run this before deploying — plaintext secrets must never be committed
 check-secrets:
     #!/usr/bin/env bash
+    set -euo pipefail
     failed=0
     for f in {{secrets_dir}}/*.yaml; do
-        [[ "$(basename "$f")" == ".sops.yaml" ]] && continue
         if ! grep -q 'sops:' "$f"; then
             echo "NOT ENCRYPTED: $f"
             failed=1
@@ -164,11 +163,11 @@ lint-fix:
 
 # Format all .nix files with nixfmt
 fmt:
-    nix --extra-experimental-features 'nix-command flakes' run nixpkgs#nixfmt -- $(find . -name '*.nix' -not -path './.git/*')
+    find . -name '*.nix' -not -path './.git/*' -print0 | xargs -0 nix --extra-experimental-features 'nix-command flakes' run nixpkgs#nixfmt --
 
 # Check formatting without writing changes
 fmt-check:
-    nix --extra-experimental-features 'nix-command flakes' run nixpkgs#nixfmt -- --check $(find . -name '*.nix' -not -path './.git/*')
+    find . -name '*.nix' -not -path './.git/*' -print0 | xargs -0 nix --extra-experimental-features 'nix-command flakes' run nixpkgs#nixfmt -- --check
 
 # ── Git ───────────────────────────────────────────────────────────────────────
 
