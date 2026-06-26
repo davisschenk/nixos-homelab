@@ -184,6 +184,45 @@ in
   };
 
   # ---------------------------------------------------------------------------
+  # fail2ban — brute-force protection with incremental banning.
+  # Jails: sshd (journal backend, no log file needed on NixOS).
+  # Prometheus exporter runs on localhost and is scraped by Prometheus.
+  # ---------------------------------------------------------------------------
+  services.fail2ban = {
+    enable = true;
+    maxretry = 5;
+    bantime = "1h";
+    bantime-increment = {
+      enable = true;
+      multipliers = "1 2 4 8 16 32 64";
+      maxtime = "168h";
+      overalljails = true;
+    };
+    ignoreIP = [
+      "127.0.0.0/8"
+      "10.0.0.0/8"
+      "192.168.0.0/16"
+    ];
+    jails = {
+      sshd = {
+        settings = {
+          enabled = true;
+          backend = "systemd";
+          filter = "sshd";
+          maxretry = 3;
+          bantime = "1h";
+        };
+      };
+    };
+  };
+
+  services.prometheus.exporters.fail2ban = {
+    enable = true;
+    port = p.fail2banExporter;
+    openFirewall = false;
+  };
+
+  # ---------------------------------------------------------------------------
   # Persistence — survive impermanence reboots
   # ---------------------------------------------------------------------------
 
@@ -194,12 +233,14 @@ in
   systemd.tmpfiles.rules = [
     "d /persist/var/lib/loki 0700 loki loki -"
     "d /persist/var/log/suricata 0755 suricata suricata -"
+    "d /persist/var/lib/fail2ban 0750 root root -"
   ];
 
   environment.persistence."/persist" = {
     directories = [
       { directory = "/var/lib/loki"; user = "loki"; group = "loki"; mode = "0700"; }
       { directory = "/var/log/suricata"; user = "suricata"; group = "suricata"; mode = "0755"; }
+      { directory = "/var/lib/fail2ban"; user = "root"; group = "root"; mode = "0750"; }
     ];
   };
 }

@@ -71,6 +71,10 @@ in
           job_name = "prowlarr";
           static_configs = [ { targets = [ "localhost:${toString p.exportarrProwlarr}" ]; } ];
         }
+        {
+          job_name = "fail2ban";
+          static_configs = [ { targets = [ "localhost:${toString p.fail2banExporter}" ]; } ];
+        }
         # Jellyfin does not expose Prometheus metrics without a separate plugin;
         # removed to avoid scrape errors.
       ];

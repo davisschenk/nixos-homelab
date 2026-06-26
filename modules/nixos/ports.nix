@@ -131,5 +131,10 @@
       default = 3100;
       description = "Grafana Loki log aggregation HTTP listen port.";
     };
+    fail2banExporter = lib.mkOption {
+      type = lib.types.port;
+      default = 9191;
+      description = "Prometheus fail2ban exporter listen port.";
+    };
   };
 }
