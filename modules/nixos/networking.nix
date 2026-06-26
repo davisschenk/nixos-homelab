@@ -104,6 +104,9 @@ in
           reverse_proxy localhost:${toString config.mylab.ports.authentik}
         }
 
+        # Mealie relies on OIDC_AUTO_REDIRECT=true + ALLOW_PASSWORD_LOGIN=false
+        # for authentication. Adding forward-auth here would add defense-in-depth
+        # but is left off intentionally since Mealie's own OIDC is the gate.
         @mealie host mealie.schenkenberger.dev
         handle @mealie {
           reverse_proxy localhost:${toString config.mylab.ports.mealie}
@@ -114,6 +117,8 @@ in
           reverse_proxy localhost:${toString config.mylab.ports.actual}
         }
 
+        # Grafana uses oauth_auto_login + disable_login_form; Authentik SSO is
+        # the only login path. forward-auth would add a second redirect hop.
         @grafana host grafana.schenkenberger.dev
         handle @grafana {
           reverse_proxy localhost:${toString config.mylab.ports.grafana}
@@ -148,11 +153,14 @@ in
           reverse_proxy localhost:${toString config.mylab.ports.romm}
         }
 
+        # Jellyfin: native app clients (mobile, smart TV) do not support Authentik
+        # SSO so forward-auth is not used; Jellyfin's own account system gates access.
         @jellyfin host jellyfin.schenkenberger.dev
         handle @jellyfin {
           reverse_proxy localhost:${toString config.mylab.ports.jellyfin}
         }
 
+        # Jellyseerr: intentionally no forward-auth to allow external sharing links.
         @seerr host seerr.schenkenberger.dev
         handle @seerr {
           reverse_proxy localhost:${toString config.mylab.ports.jellyseerr}

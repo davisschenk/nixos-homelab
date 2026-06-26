@@ -17,6 +17,10 @@ in
   sops.secrets."restic_repository" = { inherit sopsFile; };
   sops.secrets."restic_password" = { inherit sopsFile; };
 
+  # /data/frigate (camera recordings) and /data/media (copyparty files) are
+  # intentionally excluded: recordings are ephemeral by policy and media files
+  # are large enough that object-storage or a separate backup strategy is
+  # preferred. /data/vm (VM disk images) is also excluded due to size.
   services.restic.backups = {
     persist = commonSettings // {
       paths = [
