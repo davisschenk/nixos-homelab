@@ -27,6 +27,12 @@
 
   systemd.services.libvirtd.unitConfig.RequiresMountsFor = [ "/data/vm" ];
 
+  # Set NODATACOW on /data/vm so VM disk images bypass btrfs CoW and checksums.
+  # This is the conventional performance trade-off for VM image storage.
+  systemd.tmpfiles.rules = [
+    "v /data/vm 0755 root root - --nocow"
+  ];
+
   # Disable libvirt's encrypted secrets credential — systemd 260.x refuses to
   # use a host credential secret on a non-encrypted-at-rest filesystem.
   # TODO: re-evaluate and remove this workaround when systemd >= 261 is deployed.

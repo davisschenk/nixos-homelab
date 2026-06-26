@@ -110,7 +110,6 @@ _:
                   "@vm" = {
                     mountpoint = "/data/vm";
                     mountOptions = [
-                      "compress=zstd"
                       "noatime"
                     ];
                   };
