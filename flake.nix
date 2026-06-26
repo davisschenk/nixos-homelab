@@ -34,7 +34,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    impermanence.url = "github:nix-community/impermanence";
+    impermanence = {
+      url = "github:nix-community/impermanence";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
   };
 
@@ -92,11 +95,11 @@
                 "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-base.nix"
               ];
               isoImage.squashfsCompression = "zstd -Xcompression-level 6";
-              isoImage.edition = pkgs.lib.mkOverride 500 "minimal";
-              image.baseName = pkgs.lib.mkForce "mangrove-installer";
-              documentation.man.enable = pkgs.lib.mkOverride 500 true;
-              documentation.doc.enable = pkgs.lib.mkOverride 500 true;
-              fonts.fontconfig.enable = pkgs.lib.mkOverride 500 false;
+              isoImage.edition = nixpkgs.lib.mkOverride 500 "minimal";
+              image.baseName = nixpkgs.lib.mkForce "mangrove-installer";
+              documentation.man.enable = nixpkgs.lib.mkOverride 500 true;
+              documentation.doc.enable = nixpkgs.lib.mkOverride 500 true;
+              fonts.fontconfig.enable = nixpkgs.lib.mkOverride 500 false;
               environment.systemPackages = [
                 disko.packages.${system}.disko
                 disko.packages.${system}.disko-install
