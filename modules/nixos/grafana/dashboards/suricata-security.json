@@ -12,7 +12,7 @@
       }
     ]
   },
-  "description": "Suricata IDS alerts and network security events from Loki",
+  "description": "Actionable Suricata IDS alerts from Loki; protocol telemetry is intentionally excluded.",
   "editable": true,
   "gnetId": null,
   "graphTooltip": 1,
@@ -23,7 +23,7 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
       "id": 100,
-      "title": "Alert Overview",
+      "title": "Triage Overview",
       "type": "row"
     },
     {
@@ -54,12 +54,12 @@
         "graphMode": "none",
         "justifyMode": "auto"
       },
-      "title": "Total Alerts (24h)",
+      "title": "All Alerts",
       "type": "stat",
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "${datasource}" },
-          "expr": "sum(count_over_time({job=\"suricata\", event_type=\"alert\"}[$__range]))",
+          "expr": "sum(count_over_time({job=\"suricata\"}[$__range]))",
           "legendFormat": "Alerts",
           "refId": "A"
         }
@@ -91,13 +91,13 @@
         "graphMode": "none",
         "justifyMode": "auto"
       },
-      "title": "DNS Events (24h)",
+      "title": "Severity 1 (high)",
       "type": "stat",
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "${datasource}" },
-          "expr": "sum(count_over_time({job=\"suricata\", event_type=\"dns\"}[$__range]))",
-          "legendFormat": "DNS",
+          "expr": "sum(count_over_time({job=\"suricata\", severity=\"1\"}[$__range]))",
+          "legendFormat": "High",
           "refId": "A"
         }
       ]
@@ -127,13 +127,13 @@
         "graphMode": "none",
         "justifyMode": "auto"
       },
-      "title": "TLS Events (24h)",
+      "title": "Severity 2",
       "type": "stat",
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "${datasource}" },
-          "expr": "sum(count_over_time({job=\"suricata\", event_type=\"tls\"}[$__range]))",
-          "legendFormat": "TLS",
+          "expr": "sum(count_over_time({job=\"suricata\", severity=\"2\"}[$__range]))",
+          "legendFormat": "Severity 2",
           "refId": "A"
         }
       ]
@@ -163,13 +163,13 @@
         "graphMode": "none",
         "justifyMode": "auto"
       },
-      "title": "HTTP Events (24h)",
+      "title": "Severity 3",
       "type": "stat",
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "${datasource}" },
-          "expr": "sum(count_over_time({job=\"suricata\", event_type=\"http\"}[$__range]))",
-          "legendFormat": "HTTP",
+          "expr": "sum(count_over_time({job=\"suricata\", severity=\"3\"}[$__range]))",
+          "legendFormat": "Severity 3",
           "refId": "A"
         }
       ]
@@ -199,13 +199,13 @@
         "graphMode": "none",
         "justifyMode": "auto"
       },
-      "title": "Flow Events (24h)",
+      "title": "Severity 4+",
       "type": "stat",
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "${datasource}" },
-          "expr": "sum(count_over_time({job=\"suricata\", event_type=\"flow\"}[$__range]))",
-          "legendFormat": "Flows",
+          "expr": "sum(count_over_time({job=\"suricata\", severity=~\"4|5|unknown\"}[$__range]))",
+          "legendFormat": "Low/unknown",
           "refId": "A"
         }
       ]
@@ -214,7 +214,7 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
       "id": 101,
-      "title": "Alert Rate",
+      "title": "Alert Rate by Severity",
       "type": "row"
     },
     {
@@ -246,13 +246,13 @@
         "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "bottom" },
         "tooltip": { "mode": "multi" }
       },
-      "title": "Suricata Alerts Over Time",
+      "title": "Alerts Over Time",
       "type": "timeseries",
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "${datasource}" },
-          "expr": "sum by (event_type) (count_over_time({job=\"suricata\"}[$__interval]))",
-          "legendFormat": "{{event_type}}",
+          "expr": "sum by (severity) (count_over_time({job=\"suricata\"}[$__interval]))",
+          "legendFormat": "Severity {{severity}}",
           "refId": "A"
         }
       ]
@@ -298,7 +298,7 @@
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "${datasource}" },
-          "expr": "sum(count_over_time({job=\"suricata\", event_type=\"alert\"}[$__interval]))",
+          "expr": "sum(count_over_time({job=\"suricata\", severity=~\"1|2\"}[$__interval]))",
           "legendFormat": "Alerts/interval",
           "refId": "A"
         }
@@ -319,12 +319,12 @@
         "sortOrder": "Descending",
         "wrapLogMessage": true
       },
-      "title": "Recent IDS Alerts (raw)",
+      "title": "Recent High-Priority Alerts (severity 1–2)",
       "type": "logs",
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "${datasource}" },
-          "expr": "{job=\"suricata\", event_type=\"alert\"}",
+          "expr": "{job=\"suricata\", severity=~\"1|2\"}",
           "legendFormat": "",
           "refId": "A"
         }
@@ -334,7 +334,7 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 33 },
       "id": 103,
-      "title": "DNS & TLS",
+      "title": "Alert Investigation",
       "type": "row"
     },
     {
@@ -352,12 +352,12 @@
         "sortOrder": "Descending",
         "wrapLogMessage": false
       },
-      "title": "Recent DNS Queries",
+      "title": "All Recent Alerts",
       "type": "logs",
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "${datasource}" },
-          "expr": "{job=\"suricata\", event_type=\"dns\"}",
+          "expr": "{job=\"suricata\"}",
           "legendFormat": "",
           "refId": "A"
         }
@@ -365,26 +365,29 @@
     },
     {
       "datasource": { "type": "loki", "uid": "${datasource}" },
-      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 34 },
       "id": 31,
       "options": {
-        "dedupStrategy": "none",
-        "enableLogDetails": true,
-        "prettifyLogMessage": false,
-        "showCommonLabels": false,
-        "showLabels": false,
-        "showTime": true,
-        "sortOrder": "Descending",
-        "wrapLogMessage": false
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showUnfilled": true
       },
-      "title": "Recent TLS Handshakes",
-      "type": "logs",
+      "title": "Alert Categories",
+      "type": "bargauge",
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "${datasource}" },
-          "expr": "{job=\"suricata\", event_type=\"tls\"}",
-          "legendFormat": "",
+          "expr": "sum by (category) (count_over_time({job=\"suricata\"}[$__range]))",
+          "legendFormat": "{{category}}",
           "refId": "A"
         }
       ]

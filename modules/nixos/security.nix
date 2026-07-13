@@ -5,8 +5,12 @@ in
 {
   # ---------------------------------------------------------------------------
   # Suricata — network IDS watching the physical LAN interface.
-  # Runs in IDS (AF_PACKET) mode; writes EVE JSON to /var/log/suricata/eve.json
-  # which Vector picks up and ships to Loki.
+  #
+  # This is deliberately an alerting sensor, not a full packet/flow telemetry
+  # store. Logging DNS, TLS, HTTP and flow events for every connection made the
+  # security dashboard noisy and rapidly consumed Loki storage, while providing
+  # little value in normal operations. Enable a protocol event type temporarily
+  # when investigating a specific incident.
   # ---------------------------------------------------------------------------
   services.suricata = {
     enable = true;
@@ -35,10 +39,6 @@ in
             filename = "/var/log/suricata/eve.json";
             types = [
               { alert = { payload = false; packet = false; }; }
-              { dns = {}; }
-              { http = { extended = true; }; }
-              { tls = { extended = true; }; }
-              { flow = {}; }
             ];
           };
         }
@@ -119,7 +119,7 @@ in
   # ---------------------------------------------------------------------------
   # Vector — log shipping pipeline.
   #   Source 1: systemd journal  → labels: {job="systemd"}
-  #   Source 2: Suricata EVE JSON → labels: {job="suricata", event_type=<type>}
+  #   Source 2: Suricata EVE alerts → labels suitable for triage
   # Both sinks push to local Loki via HTTP.
   # ---------------------------------------------------------------------------
   services.vector = {
@@ -152,7 +152,13 @@ in
           type = "remap";
           inputs = [ "parse_suricata" ];
           source = ''
-            .event_type = string(.event_type) ?? "unknown"
+            # Keep only low-cardinality fields as Loki labels. Source/destination
+            # addresses and signatures remain in the JSON body: making either a
+            # label would create an unbounded number of Loki streams.
+            .alert_severity = string(.alert.severity) ?? "unknown"
+            .alert_category = string(.alert.category) ?? "unknown"
+            .alert_signature = string(.alert.signature) ?? "unknown"
+            .alert_signature_id = string(.alert.signature_id) ?? "unknown"
           '';
         };
 
@@ -194,7 +200,8 @@ in
           labels = {
             job = "suricata";
             host = "mangrove";
-            event_type = "{{ event_type }}";
+            severity = "{{ alert_severity }}";
+            category = "{{ alert_category }}";
           };
         };
 
