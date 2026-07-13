@@ -136,5 +136,10 @@
       default = 9191;
       description = "Prometheus fail2ban exporter listen port.";
     };
+    wealthfolio = lib.mkOption {
+      type = lib.types.port;
+      default = 8088;
+      description = "Wealthfolio portfolio tracker container host port.";
+    };
   };
 }

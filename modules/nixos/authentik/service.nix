@@ -18,6 +18,7 @@ in
     # romm.nix keep their own declarations (sops-nix merges duplicates harmlessly).
     "mealie_oidc_client_secret" = { sopsFile = ../../../secrets/mealie.yaml; };
     "romm_oidc_client_secret" = { sopsFile = ../../../secrets/romm.yaml; };
+    "wealthfolio_oidc_client_secret" = { sopsFile = ../../../secrets/wealthfolio.yaml; };
   };
 
   sops.templates."authentik-env" = {
@@ -33,6 +34,7 @@ in
       ACTUAL_OIDC_CLIENT_SECRET=${config.sops.placeholder."actual_oidc_client_secret"}
       PELICAN_OAUTH_CLIENT_ID=${config.sops.placeholder."pelican_oauth_client_id"}
       PELICAN_OAUTH_CLIENT_SECRET=${config.sops.placeholder."pelican_oauth_client_secret"}
+      WEALTHFOLIO_OIDC_CLIENT_SECRET=${config.sops.placeholder."wealthfolio_oidc_client_secret"}
     '';
     restartUnits = [
       "authentik.service"

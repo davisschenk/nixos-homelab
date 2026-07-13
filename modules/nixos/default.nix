@@ -14,6 +14,7 @@
     ./gaming-vm.nix
     ./mealie.nix
     ./actual.nix
+    ./wealthfolio.nix
     ./backup.nix
     ./overseerr.nix
     ./frigate.nix

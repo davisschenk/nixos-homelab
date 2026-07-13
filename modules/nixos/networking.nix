@@ -117,6 +117,13 @@ in
           reverse_proxy localhost:${toString config.mylab.ports.actual}
         }
 
+        # Wealthfolio does its own OIDC via Authentik (WF_OIDC_*) — no
+        # forward-auth, same as Mealie/Actual.
+        @wealthfolio host wealthfolio.schenkenberger.dev
+        handle @wealthfolio {
+          reverse_proxy localhost:${toString config.mylab.ports.wealthfolio}
+        }
+
         # Grafana uses oauth_auto_login + disable_login_form; Authentik SSO is
         # the only login path. forward-auth would add a second redirect hop.
         @grafana host grafana.schenkenberger.dev

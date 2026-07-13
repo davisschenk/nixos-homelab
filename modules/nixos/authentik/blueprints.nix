@@ -21,6 +21,7 @@ let
     "frigate"
     "home-assistant"
     "pelican"
+    "wealthfolio"
   ];
 
   customBlueprintsDir = pkgs.runCommand "authentik-blueprints" { } ''
