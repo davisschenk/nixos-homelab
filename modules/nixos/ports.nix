@@ -141,5 +141,10 @@
       default = 8088;
       description = "Wealthfolio portfolio tracker container host port.";
     };
+    tilt = lib.mkOption {
+      type = lib.types.port;
+      default = 8010;
+      description = "Tilt hydrometer platform container host port.";
+    };
   };
 }

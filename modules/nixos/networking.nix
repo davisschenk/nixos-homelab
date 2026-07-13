@@ -124,6 +124,12 @@ in
           reverse_proxy localhost:${toString config.mylab.ports.wealthfolio}
         }
 
+        # Tilt handles its own OIDC login through Authentik.
+        @tilt host tilt.schenkenberger.dev
+        handle @tilt {
+          reverse_proxy localhost:${toString config.mylab.ports.tilt}
+        }
+
         # Grafana uses oauth_auto_login + disable_login_form; Authentik SSO is
         # the only login path. forward-auth would add a second redirect hop.
         @grafana host grafana.schenkenberger.dev

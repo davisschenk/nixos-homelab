@@ -23,6 +23,7 @@ NixOS flake for `mangrove` — a self-hosted homelab server with impermanence (b
 | Prowlarr | `prowlarr.schenkenberger.dev` | Indexer manager |
 | qBittorrent | `qbit.schenkenberger.dev` | Torrent client |
 | Actual Budget | `actual.schenkenberger.dev` | Budget manager |
+| Tilt Hydrometer Platform | `tilt.schenkenberger.dev` | Fermentation monitor |
 | Copyparty | `copyparty.schenkenberger.dev` | File server |
 
 All services are accessed via Cloudflare Tunnel → Caddy reverse proxy. No ports are exposed directly to the internet.
@@ -48,6 +49,7 @@ modules/nixos/
   pelican.nix            # Pelican Panel + Wings
   gaming-vm.nix          # libvirt / QEMU / VFIO GPU passthrough
   actual.nix             # Actual Budget
+  tilt.nix               # Tilt Hydrometer Platform (Docker + PostgreSQL)
   copyparty.nix          # File server
   ports.nix              # Centralised port assignments
 

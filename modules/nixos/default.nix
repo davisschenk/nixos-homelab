@@ -15,6 +15,7 @@
     ./mealie.nix
     ./actual.nix
     ./wealthfolio.nix
+    ./tilt.nix
     ./backup.nix
     ./overseerr.nix
     ./frigate.nix

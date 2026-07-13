@@ -22,6 +22,7 @@ let
     "home-assistant"
     "pelican"
     "wealthfolio"
+    "tilt"
   ];
 
   customBlueprintsDir = pkgs.runCommand "authentik-blueprints" { } ''
