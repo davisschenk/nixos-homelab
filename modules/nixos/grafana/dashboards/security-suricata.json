@@ -12,7 +12,7 @@
       }
     ]
   },
-  "description": "SSH login activity, failures, and access patterns from systemd journal via Loki",
+  "description": "Actionable Suricata IDS alerts from Loki; protocol telemetry is intentionally excluded.",
   "editable": true,
   "gnetId": null,
   "graphTooltip": 1,
@@ -23,7 +23,7 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
       "id": 100,
-      "title": "SSH Summary",
+      "title": "Triage Overview",
       "type": "row"
     },
     {
@@ -35,14 +35,16 @@
             "mode": "absolute",
             "steps": [
               { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 }
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 10 }
             ]
           },
+          "mappings": [],
           "unit": "short"
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
       "id": 1,
       "options": {
         "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
@@ -52,13 +54,13 @@
         "graphMode": "none",
         "justifyMode": "auto"
       },
-      "title": "Successful Logins (24h)",
+      "title": "All Alerts",
       "type": "stat",
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "${datasource}" },
-          "expr": "sum(count_over_time({job=\"systemd\", unit=\"sshd.service\"} |= \"Accepted\" [$__range]))",
-          "legendFormat": "Accepted",
+          "expr": "sum(count_over_time({job=\"suricata\", severity=~\"1|2|3|4|5\"}[$__range]))",
+          "legendFormat": "Alerts",
           "refId": "A"
         }
       ]
@@ -72,15 +74,14 @@
             "mode": "absolute",
             "steps": [
               { "color": "green", "value": null },
-              { "color": "yellow", "value": 5 },
-              { "color": "red", "value": 20 }
+              { "color": "orange", "value": 1 }
             ]
           },
           "unit": "short"
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
       "id": 2,
       "options": {
         "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
@@ -90,13 +91,13 @@
         "graphMode": "none",
         "justifyMode": "auto"
       },
-      "title": "Failed Attempts (24h)",
+      "title": "Severity 1 (high)",
       "type": "stat",
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "${datasource}" },
-          "expr": "sum(count_over_time({job=\"systemd\", unit=\"sshd.service\"} |= \"Failed\" [$__range]))",
-          "legendFormat": "Failed",
+          "expr": "sum(count_over_time({job=\"suricata\", severity=\"1\"}[$__range]))",
+          "legendFormat": "High",
           "refId": "A"
         }
       ]
@@ -109,16 +110,14 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 5 },
-              { "color": "red", "value": 20 }
+              { "color": "blue", "value": null }
             ]
           },
           "unit": "short"
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
       "id": 3,
       "options": {
         "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
@@ -128,13 +127,13 @@
         "graphMode": "none",
         "justifyMode": "auto"
       },
-      "title": "Invalid User Attempts (24h)",
+      "title": "Severity 2",
       "type": "stat",
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "${datasource}" },
-          "expr": "sum(count_over_time({job=\"systemd\", unit=\"sshd.service\"} |= \"Invalid user\" [$__range]))",
-          "legendFormat": "Invalid",
+          "expr": "sum(count_over_time({job=\"suricata\", severity=\"2\"}[$__range]))",
+          "legendFormat": "Severity 2",
           "refId": "A"
         }
       ]
@@ -147,16 +146,14 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "orange", "value": 3 },
-              { "color": "red", "value": 10 }
+              { "color": "blue", "value": null }
             ]
           },
           "unit": "short"
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
       "id": 4,
       "options": {
         "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
@@ -166,13 +163,49 @@
         "graphMode": "none",
         "justifyMode": "auto"
       },
-      "title": "Disconnections (24h)",
+      "title": "Severity 3",
       "type": "stat",
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "${datasource}" },
-          "expr": "sum(count_over_time({job=\"systemd\", unit=\"sshd.service\"} |= \"Disconnected\" [$__range]))",
-          "legendFormat": "Disconnected",
+          "expr": "sum(count_over_time({job=\"suricata\", severity=\"3\"}[$__range]))",
+          "legendFormat": "Severity 3",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "loki", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "id": 5,
+      "options": {
+        "reduceOptions": { "calcs": ["sum"], "fields": "", "values": false },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "title": "Severity 4+",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "expr": "sum(count_over_time({job=\"suricata\", severity=~\"4|5\"}[$__range]))",
+          "legendFormat": "Severity 4+",
           "refId": "A"
         }
       ]
@@ -181,7 +214,7 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
       "id": 101,
-      "title": "Login Activity Over Time",
+      "title": "Alert Rate by Severity",
       "type": "row"
     },
     {
@@ -205,43 +238,22 @@
           },
           "unit": "short"
         },
-        "overrides": [
-          {
-            "matcher": { "id": "byName", "options": "Accepted" },
-            "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }]
-          },
-          {
-            "matcher": { "id": "byName", "options": "Failed" },
-            "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 6 },
       "id": 10,
       "options": {
-        "legend": { "calcs": ["sum", "max"], "displayMode": "table", "placement": "bottom" },
+        "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "bottom" },
         "tooltip": { "mode": "multi" }
       },
-      "title": "SSH Logins & Failures Over Time",
+      "title": "Alerts Over Time",
       "type": "timeseries",
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "${datasource}" },
-          "expr": "sum(count_over_time({job=\"systemd\", unit=\"sshd.service\"} |= \"Accepted\" [$__interval]))",
-          "legendFormat": "Accepted",
+          "expr": "sum by (severity) (count_over_time({job=\"suricata\", severity=~\"1|2|3|4|5\"}[$__interval]))",
+          "legendFormat": "Severity {{severity}}",
           "refId": "A"
-        },
-        {
-          "datasource": { "type": "loki", "uid": "${datasource}" },
-          "expr": "sum(count_over_time({job=\"systemd\", unit=\"sshd.service\"} |= \"Failed\" [$__interval]))",
-          "legendFormat": "Failed",
-          "refId": "B"
-        },
-        {
-          "datasource": { "type": "loki", "uid": "${datasource}" },
-          "expr": "sum(count_over_time({job=\"systemd\", unit=\"sshd.service\"} |= \"Invalid user\" [$__interval]))",
-          "legendFormat": "Invalid user",
-          "refId": "C"
         }
       ]
     },
@@ -249,31 +261,45 @@
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
       "id": 102,
-      "title": "Recent Events",
+      "title": "IDS Alerts",
       "type": "row"
     },
     {
       "datasource": { "type": "loki", "uid": "${datasource}" },
-      "fieldConfig": { "defaults": {}, "overrides": [] },
-      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 15 },
-      "id": 20,
-      "options": {
-        "dedupStrategy": "none",
-        "enableLogDetails": true,
-        "prettifyLogMessage": false,
-        "showCommonLabels": false,
-        "showLabels": false,
-        "showTime": true,
-        "sortOrder": "Descending",
-        "wrapLogMessage": true
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "unit": "short"
+        },
+        "overrides": []
       },
-      "title": "Successful Logins",
-      "type": "logs",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 15 },
+      "id": 11,
+      "options": {
+        "legend": { "calcs": ["sum"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "title": "Alert Rate Over Time",
+      "type": "timeseries",
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "${datasource}" },
-          "expr": "{job=\"systemd\", unit=\"sshd.service\"} |= \"Accepted\"",
-          "legendFormat": "",
+          "expr": "sum(count_over_time({job=\"suricata\", severity=~\"1|2\"}[$__interval]))",
+          "legendFormat": "Alerts/interval",
           "refId": "A"
         }
       ]
@@ -281,24 +307,24 @@
     {
       "datasource": { "type": "loki", "uid": "${datasource}" },
       "fieldConfig": { "defaults": {}, "overrides": [] },
-      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 15 },
-      "id": 21,
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 23 },
+      "id": 20,
       "options": {
         "dedupStrategy": "none",
         "enableLogDetails": true,
-        "prettifyLogMessage": false,
+        "prettifyLogMessage": true,
         "showCommonLabels": false,
         "showLabels": false,
         "showTime": true,
         "sortOrder": "Descending",
         "wrapLogMessage": true
       },
-      "title": "Failed & Invalid Attempts",
+      "title": "Recent High-Priority Alerts (severity 1–2)",
       "type": "logs",
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "${datasource}" },
-          "expr": "{job=\"systemd\", unit=\"sshd.service\"} |~ \"Failed|Invalid user|Connection closed by invalid\"",
+          "expr": "{job=\"suricata\", severity=~\"1|2\"}",
           "legendFormat": "",
           "refId": "A"
         }
@@ -306,15 +332,15 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 25 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 33 },
       "id": 103,
-      "title": "Full SSH Log",
+      "title": "Alert Investigation",
       "type": "row"
     },
     {
       "datasource": { "type": "loki", "uid": "${datasource}" },
       "fieldConfig": { "defaults": {}, "overrides": [] },
-      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 26 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 34 },
       "id": 30,
       "options": {
         "dedupStrategy": "none",
@@ -324,15 +350,44 @@
         "showLabels": false,
         "showTime": true,
         "sortOrder": "Descending",
-        "wrapLogMessage": true
+        "wrapLogMessage": false
       },
-      "title": "All SSH Events",
+      "title": "All Recent Alerts",
       "type": "logs",
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "${datasource}" },
-          "expr": "{job=\"systemd\", unit=\"sshd.service\"}",
+          "expr": "{job=\"suricata\", severity=~\"1|2|3|4|5\"}",
           "legendFormat": "",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "loki", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 34 },
+      "id": 31,
+      "options": {
+        "displayMode": "gradient",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showUnfilled": true
+      },
+      "title": "Alert Categories",
+      "type": "bargauge",
+      "targets": [
+        {
+          "datasource": { "type": "loki", "uid": "${datasource}" },
+          "expr": "sum by (category) (count_over_time({job=\"suricata\", severity=~\"1|2|3|4|5\"}[$__range]))",
+          "legendFormat": "{{category}}",
           "refId": "A"
         }
       ]
@@ -341,7 +396,7 @@
   "refresh": "1m",
   "schemaVersion": 36,
   "style": "dark",
-  "tags": ["security", "ssh", "access", "loki"],
+  "tags": ["security", "suricata", "ids", "loki"],
   "templating": {
     "list": [
       {
@@ -362,7 +417,7 @@
   "time": { "from": "now-24h", "to": "now" },
   "timepicker": {},
   "timezone": "browser",
-  "title": "SSH Access",
-  "uid": "ssh-access",
+  "title": "Security — Suricata",
+  "uid": "suricata-security",
   "version": 1
 }

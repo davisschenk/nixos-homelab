@@ -640,7 +640,7 @@
   "time": { "from": "now-24h", "to": "now" },
   "timepicker": {},
   "timezone": "browser",
-  "title": "fail2ban",
+  "title": "Security — Fail2ban",
   "uid": "fail2ban",
   "version": 1
 }

@@ -152,6 +152,11 @@ in
           type = "remap";
           inputs = [ "parse_suricata" ];
           source = ''
+            # The EVE file is persisted across reboots and may contain protocol
+            # telemetry written by an earlier configuration. Do not let that
+            # historical noise reach Loki; this pipeline is alert-only.
+            if .event_type != "alert" { abort }
+
             # Keep only low-cardinality fields as Loki labels. Source/destination
             # addresses and signatures remain in the JSON body: making either a
             # label would create an unbounded number of Loki streams.
