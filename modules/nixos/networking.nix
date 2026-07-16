@@ -209,6 +209,29 @@ in
           import authentik_forward_auth
           reverse_proxy localhost:${toString config.mylab.ports.homeassistant}
         }
+
+        # Coder does its own OIDC via Authentik (CODER_OIDC_*) — no
+        # forward-auth, same as Mealie/Actual/Wealthfolio/Tilt.
+        @coder host coder.schenkenberger.dev
+        handle @coder {
+          reverse_proxy localhost:${toString config.mylab.ports.coder}
+        }
+
+        # Catch-all: Coder proxies each workspace app (code-server) on a
+        # dynamically-generated subdomain (app--agent--workspace--owner.<domain>)
+        # under CODER_WILDCARD_ACCESS_URL. That's set to *.schenkenberger.dev
+        # (this same wildcard) rather than a nested *.coder.schenkenberger.dev,
+        # because Cloudflare's edge TLS only covers one level of wildcard per
+        # zone on this plan — a second-level wildcard hostname fails the TLS
+        # handshake at Cloudflare's edge before it ever reaches this Caddy
+        # instance (confirmed: DNS resolves fine, but the ClientHello gets a
+        # handshake-failure alert back from Cloudflare directly). This handle
+        # has no matcher, so it must stay last — anything not matched by a
+        # named block above (i.e. not one of our explicit services) falls
+        # through to Coder, which validates the exact subdomain itself.
+        handle {
+          reverse_proxy localhost:${toString config.mylab.ports.coder}
+        }
       '';
     };
   };

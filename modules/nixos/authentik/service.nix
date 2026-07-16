@@ -20,6 +20,7 @@ in
     "romm_oidc_client_secret" = { sopsFile = ../../../secrets/romm.yaml; };
     "wealthfolio_oidc_client_secret" = { sopsFile = ../../../secrets/wealthfolio.yaml; };
     "tilt_oidc_client_secret" = { sopsFile = ../../../secrets/tilt.yaml; };
+    "coder_oidc_client_secret" = { sopsFile = ../../../secrets/coder.yaml; };
   };
 
   sops.templates."authentik-env" = {
@@ -37,6 +38,7 @@ in
       PELICAN_OAUTH_CLIENT_SECRET=${config.sops.placeholder."pelican_oauth_client_secret"}
       WEALTHFOLIO_OIDC_CLIENT_SECRET=${config.sops.placeholder."wealthfolio_oidc_client_secret"}
       TILT_OIDC_CLIENT_SECRET=${config.sops.placeholder."tilt_oidc_client_secret"}
+      CODER_OIDC_CLIENT_SECRET=${config.sops.placeholder."coder_oidc_client_secret"}
     '';
     restartUnits = [
       "authentik.service"

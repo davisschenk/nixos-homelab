@@ -146,5 +146,10 @@
       default = 8010;
       description = "Tilt hydrometer platform container host port.";
     };
+    coder = lib.mkOption {
+      type = lib.types.port;
+      default = 8091;
+      description = "Coder remote-development platform listen port.";
+    };
   };
 }

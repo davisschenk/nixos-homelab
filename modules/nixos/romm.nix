@@ -15,7 +15,7 @@ in
   sops.templates."romm-env" = {
     content = ''
       MYSQL_PASSWORD=${config.sops.placeholder."romm_db_password"}
-      ROMM_DB_PASSWD=${config.sops.placeholder."romm_db_password"}
+      DB_PASSWD=${config.sops.placeholder."romm_db_password"}
       ROMM_AUTH_SECRET_KEY=${config.sops.placeholder."romm_auth_secret_key"}
       OIDC_CLIENT_SECRET=${config.sops.placeholder."romm_oidc_client_secret"}
       IGDB_CLIENT_ID=${config.sops.placeholder."romm_igdb_client_id"}

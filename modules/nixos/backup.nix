@@ -33,6 +33,11 @@ in
         "/persist/var/lib/postgresql"
         "/persist/etc/ssh/ssh_host_ed25519_key"
         "/persist/etc/sops/age/keys.txt"
+        # Regenerable build artifacts inside Coder workspaces
+        "/persist/coder/workspaces/*/node_modules"
+        "/persist/coder/workspaces/*/target"
+        "/persist/coder/workspaces/*/.venv"
+        "/persist/coder/workspaces/*/.cache"
       ];
       timerConfig = {
         OnCalendar = "03:00";

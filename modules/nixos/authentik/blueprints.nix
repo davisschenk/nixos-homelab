@@ -23,6 +23,7 @@ let
     "pelican"
     "wealthfolio"
     "tilt"
+    "coder"
   ];
 
   customBlueprintsDir = pkgs.runCommand "authentik-blueprints" { } ''
