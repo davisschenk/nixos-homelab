@@ -38,6 +38,7 @@ let
     rustup
     claude-code
     codex
+    just
     # Interactive shell environment
     zsh
     zsh-autosuggestions
@@ -52,44 +53,62 @@ let
 
   toolsPath = pkgs.lib.makeBinPath workspaceTools;
 
-  # No Nerd Font glyphs — code-server's integrated terminal runs in whatever
-  # font the browser/VS Code settings provide, which usually isn't one, so
-  # symbols here stick to plain Unicode/emoji that render everywhere.
+  # Starship's official "Pure" preset (starship.rs/presets/pure-preset) —
+  # verbatim, not reimplemented — faithfully replicates the classic Pure
+  # zsh prompt (sindresorhus/pure): minimal two-line prompt, no Nerd Font
+  # glyphs needed (matters here since code-server's integrated terminal runs
+  # in whatever font the browser provides, which usually isn't one).
   starshipToml = pkgs.writeText "starship.toml" ''
-    add_newline = false
+    "$schema" = 'https://starship.rs/config-schema.json'
 
-    [character]
-    success_symbol = "[❯](bold green)"
-    error_symbol = "[❯](bold red)"
+    format = """
+    $username\
+    $hostname\
+    $directory\
+    $git_branch\
+    $git_state\
+    $git_status\
+    $cmd_duration\
+    $line_break\
+    $python\
+    $character"""
 
     [directory]
-    truncation_length = 3
-    truncate_to_repo = true
+    style = "blue"
+
+    [character]
+    success_symbol = "[❯](purple)"
+    error_symbol = "[❯](red)"
+    vimcmd_symbol = "[❮](green)"
 
     [git_branch]
-    symbol = "🌱 "
+    format = "[$branch]($style)"
+    style = "bright-black"
 
     [git_status]
-    ahead = "⇡$count"
-    behind = "⇣$count"
-    diverged = "⇕⇡$ahead_count⇣$behind_count"
-    untracked = "?$count"
-    modified = "!$count"
-    staged = "+$count"
-    deleted = "✘$count"
+    format = "[[(*$conflicted$untracked$modified$staged$renamed$deleted)](218) ($ahead_behind$stashed)]($style)"
+    style = "cyan"
+    conflicted = "​"
+    untracked = "​"
+    modified = "​"
+    staged = "​"
+    renamed = "​"
+    deleted = "​"
+    stashed = "≡"
 
-    [rust]
-    symbol = "🦀 "
-
-    [nodejs]
-    symbol = "⬢ "
-
-    [python]
-    symbol = "🐍 "
+    [git_state]
+    format = '\([$state( $progress_current/$progress_total)]($style)\) '
+    style = "bright-black"
 
     [cmd_duration]
-    min_time = 2000
-    format = "took [$duration]($style) "
+    format = "[$duration]($style) "
+    style = "yellow"
+
+    [python]
+    format = "[$virtualenv]($style) "
+    style = "bright-black"
+    detect_extensions = []
+    detect_files = []
   '';
 
   # Sourced for every zsh invocation (login or not, interactive or not) —
