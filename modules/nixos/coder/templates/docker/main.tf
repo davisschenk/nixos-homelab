@@ -88,6 +88,32 @@ module "code-server" {
   subdomain = true
 }
 
+# One button per project, opening code-server (the same instance the module
+# above starts on :13337) straight into that project's folder — the
+# `?folder=` query param is exactly how the module's own "code-server" app
+# does it (confirmed from registry.coder.com/coder/code-server's source),
+# so these just point the same port at different folders.
+locals {
+  projects = ["nixos-homelab", "tilt-app", "bog-bank"]
+}
+
+resource "coder_app" "project" {
+  for_each     = data.coder_workspace.me.start_count > 0 ? toset(local.projects) : toset([])
+  agent_id     = coder_agent.main.id
+  slug         = each.value
+  display_name = each.value
+  url          = "http://localhost:13337/?folder=${urlencode("/root/${each.value}")}"
+  icon         = "/icon/code.svg"
+  subdomain    = true
+  order        = 2
+
+  healthcheck {
+    url       = "http://localhost:13337/healthz"
+    interval  = 5
+    threshold = 6
+  }
+}
+
 # Looked up rather than pulled/built — must already be present in the local
 # daemon (loaded by coder-workspace-image-load.service), errors clearly if not.
 data "docker_image" "workspace" {
