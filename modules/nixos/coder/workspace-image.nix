@@ -19,6 +19,14 @@ let
   # so permission checks are on raw numeric IDs shared with the host).
   dockerGid = "131";
 
+  # npm's global-install prefix defaults to the same store path as whatever
+  # `npm` binary is running — for nodejs_latest that's inside /nix/store,
+  # which is read-only, so `npm install -g` (used by Coder's
+  # devcontainers-cli module — see ../templates/docker/main.tf) fails with
+  # EACCES. Redirect it into $HOME instead, which the agent's startup_script
+  # already chowns to dev:dev on every start.
+  npmGlobalPrefix = "/home/dev/.npm-global";
+
   workspaceTools = with pkgs; [
     bashInteractive
     coreutils
@@ -83,7 +91,8 @@ let
   # config — exported here instead and sourced conditionally from
   # ~/.zshrc (see davisschenk/dotfiles' dot_zshrc.tmpl).
   zshenv = pkgs.writeText "zshenv" ''
-    export PATH="/usr/local/bin:${toolsPath}:$PATH"
+    export PATH="/usr/local/bin:${toolsPath}:${npmGlobalPrefix}/bin:$PATH"
+    export NPM_CONFIG_PREFIX="${npmGlobalPrefix}"
     export ZSH_AUTOSUGGESTIONS_SH="${pkgs.zsh-autosuggestions}/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
     export ZSH_SYNTAX_HIGHLIGHTING_SH="${pkgs.zsh-syntax-highlighting}/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
   '';
@@ -256,7 +265,8 @@ pkgs.dockerTools.streamLayeredImage {
     # *after* resetting PATH, so a script there is the correct, standard
     # place to re-append it for every shell, login or not.
     mkdir -p etc/profile.d
-    echo 'export PATH="/usr/local/bin:${toolsPath}:$PATH"' > etc/profile.d/00-nix-tools-path.sh
+    echo 'export PATH="/usr/local/bin:${toolsPath}:${npmGlobalPrefix}/bin:$PATH"' > etc/profile.d/00-nix-tools-path.sh
+    echo 'export NPM_CONFIG_PREFIX="${npmGlobalPrefix}"' >> etc/profile.d/00-nix-tools-path.sh
 
     # zsh as the default interactive shell. Starship + the modern CLI kit
     # (fzf, zoxide, eza, bat, atuin) are wired up in ~/.zshrc, applied by
@@ -317,11 +327,12 @@ pkgs.dockerTools.streamLayeredImage {
     # /etc/profile.d/00-nix-tools-path.sh (bash/sh) and /etc/zshenv (zsh) for
     # login shells, which don't inherit this (see extraCommands above).
     Env = [
-      "PATH=/usr/local/bin:${toolsPath}:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin"
+      "PATH=/usr/local/bin:${toolsPath}:${npmGlobalPrefix}/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin"
       "SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt"
       "SHELL=${pkgs.zsh}/bin/zsh"
       "LANG=C.UTF-8"
       "HOME=/home/dev"
+      "NPM_CONFIG_PREFIX=${npmGlobalPrefix}"
     ];
     # Non-root by default — see the `passwd`/`group`/`sudoers` files above.
     User = "1000:1000";
