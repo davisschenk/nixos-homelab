@@ -34,6 +34,7 @@ let
     gzip
     which
     git
+    gh
     openssh
     curl
     cacert
