@@ -110,6 +110,21 @@ resource "coder_agent" "main" {
   EOT
 }
 
+# Applies davisschenk/dotfiles on every agent start (chezmoi-managed zsh
+# config + starship's Pure preset — see that repo's install.sh/README).
+# No hardcoded `dotfiles_uri`: leaving it to `default_dotfiles_uri` instead
+# means the module exposes its own `coder_parameter`, pre-filled with this
+# default but overridable per-user — same "per-user config isn't a Nix/
+# Terraform hardcode" philosophy as the Claude Code/Codex/gh auth setup
+# documented in ../../default.nix.
+module "dotfiles" {
+  count                = data.coder_workspace.me.start_count
+  source               = "registry.coder.com/coder/dotfiles/coder"
+  version              = "~> 1.4"
+  agent_id             = coder_agent.main.id
+  default_dotfiles_uri = "https://github.com/davisschenk/dotfiles"
+}
+
 # VS Code in the browser, proxied by Coder under the *.schenkenberger.dev
 # wildcard (see networking.nix) — this is what makes the workspace "easily
 # accessible" from a browser without any local editor setup.

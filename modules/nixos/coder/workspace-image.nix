@@ -69,109 +69,23 @@ let
     eza
     bat
     atuin
+    chezmoi
   ];
 
   toolsPath = pkgs.lib.makeBinPath workspaceTools;
 
-  # Starship's official "Pure" preset (starship.rs/presets/pure-preset) —
-  # verbatim, not reimplemented — faithfully replicates the classic Pure
-  # zsh prompt (sindresorhus/pure): minimal two-line prompt, no Nerd Font
-  # glyphs needed (matters here since code-server's integrated terminal runs
-  # in whatever font the browser provides, which usually isn't one).
-  starshipToml = pkgs.writeText "starship.toml" ''
-    "$schema" = 'https://starship.rs/config-schema.json'
-
-    format = """
-    $username\
-    $hostname\
-    $directory\
-    $git_branch\
-    $git_state\
-    $git_status\
-    $cmd_duration\
-    $line_break\
-    $python\
-    $character"""
-
-    [directory]
-    style = "blue"
-
-    [character]
-    success_symbol = "[❯](purple)"
-    error_symbol = "[❯](red)"
-    vimcmd_symbol = "[❮](green)"
-
-    [git_branch]
-    format = "[$branch]($style)"
-    style = "bright-black"
-
-    [git_status]
-    format = "[[(*$conflicted$untracked$modified$staged$renamed$deleted)](218) ($ahead_behind$stashed)]($style)"
-    style = "cyan"
-    conflicted = "​"
-    untracked = "​"
-    modified = "​"
-    staged = "​"
-    renamed = "​"
-    deleted = "​"
-    stashed = "≡"
-
-    [git_state]
-    format = '\([$state( $progress_current/$progress_total)]($style)\) '
-    style = "bright-black"
-
-    [cmd_duration]
-    format = "[$duration]($style) "
-    style = "yellow"
-
-    [python]
-    format = "[$virtualenv]($style) "
-    style = "bright-black"
-    detect_extensions = []
-    detect_files = []
-  '';
-
   # Sourced for every zsh invocation (login or not, interactive or not) —
   # the zsh equivalent of /etc/profile.d for bash/sh. zsh does NOT read
   # /etc/profile on its own, so the PATH fix below is separate from (but
-  # mirrors) the bash one in extraCommands.
+  # mirrors) the bash one in extraCommands. The two plugin paths are only
+  # knowable at image-build time (Nix store hashes), so they can't live in
+  # the (portable, non-Nix) dotfiles repo that manages the rest of zsh's
+  # config — exported here instead and sourced conditionally from
+  # ~/.zshrc (see davisschenk/dotfiles' dot_zshrc.tmpl).
   zshenv = pkgs.writeText "zshenv" ''
     export PATH="/usr/local/bin:${toolsPath}:$PATH"
-  '';
-
-  zshrc = pkgs.writeText "zshrc" ''
-    HISTFILE=~/.zsh_history
-    HISTSIZE=50000
-    SAVEHIST=50000
-    setopt SHARE_HISTORY
-    setopt HIST_IGNORE_ALL_DUPS
-    setopt HIST_IGNORE_SPACE
-    setopt APPEND_HISTORY
-    setopt INC_APPEND_HISTORY
-
-    autoload -Uz compinit && compinit
-
-    alias ls='eza'
-    alias ll='eza -la --git'
-    alias la='eza -a'
-    alias cat='bat --paging=never'
-    alias gs='git status'
-    alias ga='git add'
-    alias gc='git commit'
-    alias gp='git push'
-    alias gl='git log --oneline --graph --decorate'
-    alias gd='git diff'
-
-    export STARSHIP_CONFIG=/etc/starship.toml
-    eval "$(starship init zsh)"
-    eval "$(zoxide init zsh --cmd cd)"
-    eval "$(atuin init zsh)"
-    source <(fzf --zsh)
-
-    # zsh-syntax-highlighting must be sourced last — it wraps existing
-    # widgets, so anything sourced after it that also wraps widgets breaks.
-    source ${pkgs.zsh-autosuggestions}/share/zsh-autosuggestions/zsh-autosuggestions.zsh
-    source ${pkgs.zsh-syntax-highlighting}/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+    export ZSH_AUTOSUGGESTIONS_SH="${pkgs.zsh-autosuggestions}/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+    export ZSH_SYNTAX_HIGHLIGHTING_SH="${pkgs.zsh-syntax-highlighting}/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
   '';
 
   # `extraCommands` only ever sees the `contents` packages' own symlinkJoin
@@ -344,14 +258,15 @@ pkgs.dockerTools.streamLayeredImage {
     mkdir -p etc/profile.d
     echo 'export PATH="/usr/local/bin:${toolsPath}:$PATH"' > etc/profile.d/00-nix-tools-path.sh
 
-    # zsh as the default interactive shell, with starship + a modern CLI kit
-    # (fzf, zoxide, eza, bat, atuin) wired up in /etc/zshrc. Coder's agent
-    # looks up the login shell via /etc/passwd (not $SHELL), so it has to be
-    # a full replacement file, not a `sed`/`>>` patch — see comment above the
+    # zsh as the default interactive shell. Starship + the modern CLI kit
+    # (fzf, zoxide, eza, bat, atuin) are wired up in ~/.zshrc, applied by
+    # Coder's dotfiles integration (davisschenk/dotfiles) rather than baked
+    # in here — only the PATH fix and the two Nix-store-path exports above
+    # are genuinely image-build-time knowledge. Coder's agent looks up the
+    # login shell via /etc/passwd (not $SHELL), so that one has to be a full
+    # replacement file, not a `sed`/`>>` patch — see comment above the
     # `passwd`/`group`/`shells` definitions for why.
     cp ${zshenv} etc/zshenv
-    cp ${zshrc} etc/zshrc
-    cp ${starshipToml} etc/starship.toml
     cp ${passwd} etc/passwd
     cp ${group} etc/group
     cp ${shells} etc/shells
@@ -404,7 +319,6 @@ pkgs.dockerTools.streamLayeredImage {
     Env = [
       "PATH=/usr/local/bin:${toolsPath}:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin"
       "SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt"
-      "STARSHIP_CONFIG=/etc/starship.toml"
       "SHELL=${pkgs.zsh}/bin/zsh"
       "LANG=C.UTF-8"
       "HOME=/home/dev"
