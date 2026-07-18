@@ -78,7 +78,7 @@ in
 
   systemd.tmpfiles.rules = [
     "d /persist/containers/tilt          0750 root root -"
-    "d /persist/containers/tilt/postgres 0700 999  999  -"
+    "d /persist/containers/tilt/postgres 0700 70   70   -"
     "d /persist/containers/tilt/uploads  0750 root root -"
   ];
 
