@@ -27,8 +27,8 @@ data "coder_workspace_owner" "me" {}
 resource "coder_agent" "main" {
   arch = data.coder_provisioner.me.arch
   os   = "linux"
-  # No `dir` — deprecated in favor of just leaving it at $HOME (which for
-  # root already is /root anyway).
+  # No `dir` — deprecated in favor of just leaving it at $HOME (/home/dev,
+  # per the image's non-root "dev" user).
 
   env = {
     GIT_AUTHOR_NAME     = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
@@ -53,6 +53,29 @@ resource "coder_agent" "main" {
   # idempotent across stop/start — already-cloned repos are left alone,
   # never re-cloned or clobbered.
   startup_script = <<-EOT
+    # Docker auto-creates a missing bind-mount source as root:root, and the
+    # container itself runs as non-root "dev" (uid 1000) — without this,
+    # the very first command below would fail with permission denied on
+    # $HOME. Recursive, since workspaces migrated from the old root-based
+    # image have existing repo contents owned root:root all the way down.
+    # Gated on a sentinel file rather than $HOME's own ownership — $HOME
+    # itself can already read as dev:dev (e.g. Docker set it that way, or a
+    # prior partial fix touched it) while everything underneath is still
+    # root:root, which would make an ownership-based check skip the walk
+    # and leave the real problem in place (hit this exact case on a real
+    # migrated workspace). Recursive chown covers $HOME itself too, so no
+    # separate non-recursive chown is needed before this.
+    if [ ! -f "$HOME/.chown-done" ]; then
+      sudo chown -R dev:dev "$HOME"
+      touch "$HOME/.chown-done"
+    fi
+
+    # zsh's new-user-install wizard checks for a ~/.zshrc specifically (system-
+    # wide /etc/zshrc doesn't satisfy it) and otherwise blocks the very first
+    # interactive shell with an interactive prompt. Idempotent no-op after
+    # the first start.
+    touch ~/.zshrc
+
     git config --global user.name "${coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)}"
     git config --global user.email "${data.coder_workspace_owner.me.email}"
 
@@ -83,7 +106,7 @@ module "code-server" {
   source    = "registry.coder.com/coder/code-server/coder"
   version   = "~> 1.5"
   agent_id  = coder_agent.main.id
-  folder    = "/root"
+  folder    = "/home/dev"
   order     = 1
   subdomain = true
 }
@@ -102,7 +125,7 @@ resource "coder_app" "project" {
   agent_id     = coder_agent.main.id
   slug         = each.value
   display_name = each.value
-  url          = "http://localhost:13337/?folder=${urlencode("/root/${each.value}")}"
+  url          = "http://localhost:13337/?folder=${urlencode("/home/dev/${each.value}")}"
   icon         = "/icon/code.svg"
   subdomain    = true
   order        = 2
@@ -128,19 +151,38 @@ resource "docker_container" "workspace" {
   entrypoint = ["sh", "-c", coder_agent.main.init_script]
   env        = ["CODER_AGENT_TOKEN=${coder_agent.main.token}"]
 
+  # The container's /etc/group lists "dev" as a member of "docker" (gid 131,
+  # matching mangrove's real docker group), but that mapping alone doesn't
+  # apply supplementary groups to the running process — Docker sets a
+  # container process's groups explicitly at creation, it doesn't consult
+  # NSS/group file membership at runtime. Without this, `docker ps` inside
+  # the workspace fails with "permission denied" on the bind-mounted socket
+  # despite /etc/group looking correct (confirmed on a real deploy).
+  group_add = ["131"]
+
   host {
     host = "host.docker.internal"
     ip   = "host-gateway"
   }
 
   # Bind mount, not a docker_volume — /var/lib/docker (and any named volume
-  # in it) is wiped on every host reboot, /persist is not. Runs as root
-  # inside the container (no uid matching needed for a bind mount owned by
-  # the host's docker daemon), acceptable since this template is gated to a
-  # single admin account via the Authentik policy binding on the Coder app.
+  # in it) is wiped on every host reboot, /persist is not. Docker
+  # auto-creates this as root:root on first use since it doesn't exist yet;
+  # the agent's startup_script chowns it to dev:dev on every start (a no-op
+  # once already correct).
   volumes {
     host_path      = "/persist/coder/workspaces/${data.coder_workspace.me.name}"
-    container_path = "/root"
+    container_path = "/home/dev"
+    read_only      = false
+  }
+
+  # Docker-outside-of-Docker: the workspace container has no daemon of its
+  # own, just the CLI + compose plugin, talking to the *host's* dockerd over
+  # its socket — the same pattern Coder itself uses for provisioning. This is
+  # why the image's "docker" group is set to mangrove's real docker GID (131).
+  volumes {
+    host_path      = "/var/run/docker.sock"
+    container_path = "/var/run/docker.sock"
     read_only      = false
   }
 
