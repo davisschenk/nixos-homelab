@@ -152,6 +152,7 @@ Secrets are encrypted with [SOPS](https://github.com/getsops/sops) using an age 
 | `secrets/mail.yaml` | Shared mail credentials (Mailjet) |
 | `secrets/grafana.yaml` | Grafana secret key |
 | `secrets/mealie.yaml` | Mealie OIDC client secret, OpenAI key |
+| `secrets/coder.yaml` | Coder OIDC client secret, template-push API token, GitHub external-auth client id/secret |
 | `secrets/pelican.yaml` | Pelican app key, DB password, Wings token |
 | `secrets/romm.yaml` | RomM DB password, auth secret, IGDB keys |
 | `secrets/restic.yaml` | Restic repository path + password |

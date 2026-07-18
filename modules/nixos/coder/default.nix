@@ -6,6 +6,27 @@
 # Coder's own app proxy, so this module is the whole answer to "an
 # easily-accessible browser coding environment" — see workspace-image.nix for
 # the tools baked into the workspace image itself.
+#
+# Claude Code / Codex / `gh` auth inside a workspace is deliberately NOT
+# provisioned here — it's per-user state, and Coder already has a home for
+# that ("User Secrets": `coder secret` CLI, injected into every workspace a
+# user owns at startup, before the container's entrypoint runs) that beats
+# anything this module could do with Nix/sops (those are per-deployment, not
+# per-user). One-time setup, run once from any workspace (or locally with
+# `coder login https://coder.schenkenberger.dev`):
+#
+#   claude setup-token   # prints a 1-year OAuth token; bills against your
+#                         # Claude subscription, not pay-per-token API usage
+#   echo -n '<token>' | coder secret create claude-oauth --env CLAUDE_CODE_OAUTH_TOKEN
+#
+#   codex login --device-auth   # headless-friendly OAuth flow; bills against
+#                                # your ChatGPT plan
+#   coder secret create codex-auth --file ~/.codex/auth.json < ~/.codex/auth.json
+#
+# Both then auto-inject into every *new* workspace with no login step;
+# existing workspaces pick them up on their next restart. `gh` auth instead
+# comes from the GitHub external-auth provider below (CODER_EXTERNAL_AUTH_0_*)
+# once linked via the "GitHub" button Coder adds to the workspace page.
 { config, pkgs, lib, ... }:
 let
   sopsFile = ../../../secrets/coder.yaml;
@@ -18,10 +39,14 @@ in
 
   sops.secrets."coder_oidc_client_secret" = { inherit sopsFile; };
   sops.secrets."coder_api_token" = { inherit sopsFile; };
+  sops.secrets."coder_github_client_id" = { inherit sopsFile; };
+  sops.secrets."coder_github_client_secret" = { inherit sopsFile; };
 
   sops.templates."coder-env" = {
     content = ''
       CODER_OIDC_CLIENT_SECRET=${config.sops.placeholder."coder_oidc_client_secret"}
+      CODER_EXTERNAL_AUTH_0_CLIENT_ID=${config.sops.placeholder."coder_github_client_id"}
+      CODER_EXTERNAL_AUTH_0_CLIENT_SECRET=${config.sops.placeholder."coder_github_client_secret"}
     '';
     restartUnits = [ "coder.service" ];
   };
@@ -81,9 +106,15 @@ in
       # crashes coderd with "read external auth providers from env: parse
       # number: GITHUB_DEFAULT_PROVIDER_ENABLE": Coder's external-auth env
       # parser scans every CODER_EXTERNAL_AUTH_* var expecting an index
-      # number right after that prefix and chokes on this one. It only
-      # affects linking external Git auth from within a workspace, not
-      # logging in, so it's not needed for "Authentik only" anyway.)
+      # number right after that prefix and chokes on this one, confirmed on
+      # a real deploy. It defaults to "true", meaning coderd's own
+      # Coder-hosted GitHub app (shares data with Coder Inc if ever used) is
+      # technically still reachable — but only under its own default ID,
+      # which nothing below references, so in practice it's never
+      # triggered. The custom provider below (index 0, id "primary-github")
+      # is what workspaces actually use for git-over-HTTPS and `gh`.
+      CODER_EXTERNAL_AUTH_0_ID = "primary-github";
+      CODER_EXTERNAL_AUTH_0_TYPE = "github";
       # Password auth stays reachable for Owner-role accounts only (Coder's
       # own anti-lockout carve-out) — fine, since the only owner-role
       # accounts here (automation) authenticate via API token, not this page.

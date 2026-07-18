@@ -45,11 +45,11 @@ let
     claude-code
     codex
     just
-    # Project-specific: sea-orm-cli (tilt-app migrations), leptosfmt (bog-bank
-    # `just check`) — clippy/rustfmt come from `rustup component add`, done
-    # once a toolchain is installed, not baked in here.
-    sea-orm-cli
-    leptosfmt
+    # sea-orm-cli (tilt-app) and leptosfmt (bog-bank) used to live here as
+    # project-specific tools — moved into each repo's own
+    # .devcontainer/devcontainer.json (see templates/docker/main.tf's
+    # coder_devcontainer resources) so a project's toolchain no longer
+    # requires a nixos-homelab rebuild to change.
     # Nix itself, so nixos-homelab and bog-bank (both ship a flake.nix) can
     # actually be built/checked from inside a workspace.
     nix

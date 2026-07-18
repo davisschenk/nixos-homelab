@@ -24,6 +24,17 @@ data "coder_provisioner" "me" {}
 data "coder_workspace" "me" {}
 data "coder_workspace_owner" "me" {}
 
+# GitHub external auth (see ../../default.nix's CODER_EXTERNAL_AUTH_0_* for
+# the custom OAuth app this points at). `optional = true` so a workspace can
+# still be created/started before the owner links it — git-over-SSH via
+# `coder gitssh` keeps working as the fallback either way (Coder tries
+# external-auth tokens first, falls back to SSH automatically). The token
+# below feeds GH_TOKEN, which `gh` reads natively.
+data "coder_external_auth" "github" {
+  id       = "primary-github"
+  optional = true
+}
+
 resource "coder_agent" "main" {
   arch = data.coder_provisioner.me.arch
   os   = "linux"
@@ -35,6 +46,7 @@ resource "coder_agent" "main" {
     GIT_AUTHOR_EMAIL    = data.coder_workspace_owner.me.email
     GIT_COMMITTER_NAME  = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
     GIT_COMMITTER_EMAIL = data.coder_workspace_owner.me.email
+    GH_TOKEN            = try(data.coder_external_auth.github.access_token, "")
   }
 
   # Runs once when the agent starts. Sets up git identity and clones the
@@ -135,6 +147,40 @@ resource "coder_app" "project" {
     interval  = 5
     threshold = 6
   }
+}
+
+# Dev Containers integration — installs @devcontainers/cli on the parent
+# agent (this workspace already bind-mounts the host's docker.sock below,
+# which is exactly this module's prerequisite) so each project can define
+# its own tools in its own .devcontainer/devcontainer.json instead of
+# everything living in ../../workspace-image.nix. Each dev container that
+# exists shows up in the Coder dashboard as a sub-agent with its own
+# apps/SSH/port forwarding.
+#
+# All three projects now carry their own .devcontainer/devcontainer.json
+# (each authored + build-tested with @devcontainers/cli directly, not just
+# hand-written): nixos-homelab installs the just/nixd/statix/deadnix/sops
+# toolchain via the nix feature's `packages` option; bog-bank installs Nix +
+# direnv and activates its own flake.nix devShell (single source of truth
+# for cargo/leptosfmt/etc, nothing to keep in sync here); tilt-app installs
+# rust + node features plus sea-orm-cli via postCreateCommand (needs
+# pkg-config + libssl-dev first — sea-orm's sqlx-postgres backend links
+# native OpenSSL). Once these are in day-to-day use, sea-orm-cli and
+# leptosfmt can come out of ../../workspace-image.nix — left in place for
+# now since removing them today would break anyone still relying on the
+# outer shell before switching over.
+module "devcontainers-cli" {
+  count    = data.coder_workspace.me.start_count
+  source   = "registry.coder.com/coder/devcontainers-cli/coder"
+  version  = "~> 1.0"
+  agent_id = coder_agent.main.id
+}
+
+resource "coder_devcontainer" "project" {
+  for_each         = data.coder_workspace.me.start_count > 0 ? toset(local.projects) : toset([])
+  depends_on       = [module.devcontainers-cli]
+  agent_id         = coder_agent.main.id
+  workspace_folder = "/home/dev/${each.value}"
 }
 
 # Looked up rather than pulled/built — must already be present in the local
