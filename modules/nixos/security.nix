@@ -202,6 +202,11 @@ in
           inputs = [ "suricata_labels" ];
           endpoint = "http://127.0.0.1:${toString p.loki}";
           encoding.codec = "json";
+          # Label values come from our own remap transforms, not raw
+          # attacker-controlled strings; Vector 0.57's template-confinement
+          # check (requiring a literal string prefix on every templated
+          # field) has nothing to add here.
+          dangerously_allow_unconfined_template_resolution = true;
           labels = {
             job = "suricata";
             host = "mangrove";
@@ -215,6 +220,7 @@ in
           inputs = [ "parse_f2b_ban" ];
           endpoint = "http://127.0.0.1:${toString p.loki}";
           encoding.codec = "json";
+          dangerously_allow_unconfined_template_resolution = true;
           labels = {
             job = "fail2ban-bans";
             host = "mangrove";
@@ -228,6 +234,7 @@ in
           inputs = [ "journal_labels" ];
           endpoint = "http://127.0.0.1:${toString p.loki}";
           encoding.codec = "json";
+          dangerously_allow_unconfined_template_resolution = true;
           labels = {
             job = "systemd";
             host = "mangrove";
