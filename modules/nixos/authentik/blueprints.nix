@@ -24,6 +24,7 @@ let
     "wealthfolio"
     "tilt"
     "coder"
+    "session"
   ];
 
   customBlueprintsDir = pkgs.runCommand "authentik-blueprints" { } ''

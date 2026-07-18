@@ -1,0 +1,12 @@
+version: 1
+metadata:
+  name: "Mangrove - Session Duration"
+  labels:
+    blueprints.goauthentik.io/instantiate: "true"
+entries:
+  - model: authentik_stages_user_login.userloginstage
+    state: present
+    identifiers:
+      name: "default-authentication-login"
+    attrs:
+      session_duration: "weeks=2"
