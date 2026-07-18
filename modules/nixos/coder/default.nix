@@ -193,9 +193,15 @@ in
 
   # Pushes ./templates/docker as the "docker-dev" template on every activation
   # where its content changed (restartTriggers), using the API token above.
-  # Fails harmlessly (and non-repeatedly, since Type=oneshot doesn't retry on
-  # its own) until a real token is in secrets/coder.yaml — sops-nix's
-  # restartUnits then re-triggers this the moment that secret is filled in.
+  #
+  # after/requires on coder.service only guarantees coder.service's start job
+  # completed, not that coderd is actually serving — Type=simple/exec units
+  # are "active" as soon as the process forks, well before coderd finishes
+  # booting. coder.service itself races Authentik's startup the same way (see
+  # its own after=authentik.service comment above) and can crash-loop a few
+  # times before it sticks, so this can hit a 502 from a coder.service that's
+  # mid-restart. Restart=on-failure (oneshot services support this — they just
+  # don't restart on a clean exit) retries instead of failing the deploy hard.
   systemd.services.coder-templates-push = {
     description = "Push the Coder Docker workspace template";
     after = [ "coder.service" ];
@@ -208,6 +214,12 @@ in
       RemainAfterExit = false;
       EnvironmentFile = config.sops.templates."coder-templates-push-env".path;
       ExecStart = "${pkgs.coder}/bin/coder templates push docker-dev --directory ${./templates/docker} --yes";
+      Restart = "on-failure";
+      RestartSec = "10s";
+    };
+    unitConfig = {
+      StartLimitIntervalSec = 300;
+      StartLimitBurst = 10;
     };
   };
 }
