@@ -33,18 +33,6 @@
     "v /data/vm 0755 root root - --nocow"
   ];
 
-  # Disable libvirt's encrypted secrets credential — systemd 260.x refuses to
-  # use a host credential secret on a non-encrypted-at-rest filesystem.
-  # TODO: re-evaluate and remove this workaround when systemd >= 261 is deployed.
-  systemd.services.libvirtd.serviceConfig.LoadCredentialEncrypted = "";
-
-  assertions = [
-    {
-      assertion = lib.versionOlder config.systemd.package.version "261";
-      message = "gaming-vm: remove LoadCredentialEncrypted workaround — systemd >= 261 is now deployed";
-    }
-  ];
-
   environment.persistence."/persist" = {
     directories = [ "/var/lib/libvirt" ];
   };
