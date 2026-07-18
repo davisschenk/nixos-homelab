@@ -192,10 +192,17 @@ module "devcontainers-cli" {
 }
 
 resource "coder_devcontainer" "project" {
-  for_each         = data.coder_workspace.me.start_count > 0 ? toset(local.projects) : toset([])
-  depends_on       = [module.devcontainers-cli]
-  agent_id         = coder_agent.main.id
-  workspace_folder = "/home/dev/${each.value}"
+  for_each   = data.coder_workspace.me.start_count > 0 ? toset(local.projects) : toset([])
+  depends_on = [module.devcontainers-cli]
+  agent_id   = coder_agent.main.id
+  # Must be the host-identical path (see the second "docker_container.workspace"
+  # volumes block below), not "/home/dev/${each.value}" — devcontainers-cli
+  # runs `docker run --mount type=bind,source=<workspace_folder>,...` against
+  # the *host's* daemon (docker-outside-of-docker), so the path it passes has
+  # to already exist on the host, not just inside this container. Confirmed
+  # on a real deploy: "/home/dev/bog-bank" failed with "bind source path does
+  # not exist" because that exact path is only valid in here, not on mangrove.
+  workspace_folder = "/persist/coder/workspaces/${data.coder_workspace.me.name}/${each.value}"
 }
 
 # Looked up rather than pulled/built — must already be present in the local
@@ -234,6 +241,21 @@ resource "docker_container" "workspace" {
   volumes {
     host_path      = "/persist/coder/workspaces/${data.coder_workspace.me.name}"
     container_path = "/home/dev"
+    read_only      = false
+  }
+
+  # The same host directory, mounted a second time at its own host-identical
+  # path. Docker-outside-of-Docker (below) means devcontainers-cli's bind
+  # mounts get resolved by the *host's* dockerd, not this container's
+  # filesystem — a source path only valid in here (like "/home/dev/bog-bank")
+  # doesn't exist over there. Mounting the same directory again at the literal
+  # host path gives devcontainers-cli something that resolves on both sides
+  # (see coder_devcontainer.project's workspace_folder). Writes through either
+  # mount land in the same underlying host directory, so there's nothing to
+  # keep in sync.
+  volumes {
+    host_path      = "/persist/coder/workspaces/${data.coder_workspace.me.name}"
+    container_path = "/persist/coder/workspaces/${data.coder_workspace.me.name}"
     read_only      = false
   }
 
