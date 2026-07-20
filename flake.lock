@@ -268,11 +268,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1778415035,
-        "narHash": "sha256-iOZHkxwdxxmO1b3WjYUgSHX5adYG1zfBlHR6OaGIQQE=",
+        "lastModified": 1782987418,
+        "narHash": "sha256-KlJUA9XELz0+Lkt2dovOPOpIqr1eKBjYypz7jM0Ijng=",
         "owner": "Hythera",
         "repo": "nix-pelican",
-        "rev": "e79d2d141a58876bbfe72a45721c16469fac2d1e",
+        "rev": "a42eeaeb20ea5ae3d8da27a24bb2d4edfd401f5c",
         "type": "github"
       },
       "original": {
