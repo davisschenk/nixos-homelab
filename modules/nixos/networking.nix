@@ -231,7 +231,7 @@ in
         # (scanner noise, typos, stale/removed subdomains) gets redirected to
         # a generic 404 here instead of round-tripping to Coder's branded
         # error page.
-        @coder_app host_regexp ^[a-z0-9-]+--[a-z0-9-]+--[a-z0-9-]+(--[a-z0-9-]+)?\.schenkenberger\.dev$
+        @coder_app header_regexp Host ^[a-z0-9-]+--[a-z0-9-]+--[a-z0-9-]+(--[a-z0-9-]+)?\.schenkenberger\.dev$
         handle @coder_app {
           reverse_proxy localhost:${toString config.mylab.ports.coder}
         }
