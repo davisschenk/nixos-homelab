@@ -42,7 +42,8 @@
 
   networking.firewall = {
     enable = true;
-    allowedTCPPorts = [ 22 ];
+    allowedTCPPorts = [ 22 config.mylab.ports.minecraft ];
+    allowedUDPPorts = [ config.mylab.ports.minecraft ];
     # UDP 5353 is opened by services.avahi.openFirewall = true (the default)
   };
 

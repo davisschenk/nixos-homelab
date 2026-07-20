@@ -151,5 +151,10 @@
       default = 8091;
       description = "Coder remote-development platform listen port.";
     };
+    minecraft = lib.mkOption {
+      type = lib.types.port;
+      default = 25565;
+      description = "Minecraft server listen port.";
+    };
   };
 }
