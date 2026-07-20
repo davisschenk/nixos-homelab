@@ -17,6 +17,7 @@
     ./wealthfolio.nix
     ./tilt.nix
     ./coder
+    ./github-runners.nix
     ./backup.nix
     ./overseerr.nix
     ./frigate.nix
