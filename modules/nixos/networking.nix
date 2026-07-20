@@ -217,20 +217,27 @@ in
           reverse_proxy localhost:${toString config.mylab.ports.coder}
         }
 
-        # Catch-all: Coder proxies each workspace app (code-server) on a
-        # dynamically-generated subdomain (app--agent--workspace--owner.<domain>)
-        # under CODER_WILDCARD_ACCESS_URL. That's set to *.schenkenberger.dev
-        # (this same wildcard) rather than a nested *.coder.schenkenberger.dev,
+        # Coder proxies each workspace app (code-server) on a
+        # dynamically-generated subdomain (app--[agent--]workspace--owner.<domain>,
+        # e.g. code-server--olive-quelea-87--davisschenkenberger) under
+        # CODER_WILDCARD_ACCESS_URL. That's set to *.schenkenberger.dev (this
+        # same wildcard) rather than a nested *.coder.schenkenberger.dev,
         # because Cloudflare's edge TLS only covers one level of wildcard per
         # zone on this plan — a second-level wildcard hostname fails the TLS
         # handshake at Cloudflare's edge before it ever reaches this Caddy
         # instance (confirmed: DNS resolves fine, but the ClientHello gets a
-        # handshake-failure alert back from Cloudflare directly). This handle
-        # has no matcher, so it must stay last — anything not matched by a
-        # named block above (i.e. not one of our explicit services) falls
-        # through to Coder, which validates the exact subdomain itself.
-        handle {
+        # handshake-failure alert back from Cloudflare directly). Only forward
+        # hostnames shaped like a workspace app to Coder; everything else
+        # (scanner noise, typos, stale/removed subdomains) gets redirected to
+        # a generic 404 here instead of round-tripping to Coder's branded
+        # error page.
+        @coder_app host_regexp ^[a-z0-9-]+--[a-z0-9-]+--[a-z0-9-]+(--[a-z0-9-]+)?\.schenkenberger\.dev$
+        handle @coder_app {
           reverse_proxy localhost:${toString config.mylab.ports.coder}
+        }
+
+        handle {
+          redir * https://http.cat/404
         }
       '';
     };
