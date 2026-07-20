@@ -48,7 +48,7 @@ in
     postgresql = commonSettings // {
       backupPrepareCommand = ''
         mkdir -p /var/backup/postgresql
-        su -s /bin/sh postgres \
+        ${pkgs.shadow.su}/bin/su -s /bin/sh postgres \
           -c "${config.services.postgresql.package}/bin/pg_dumpall \
             -f /var/backup/postgresql/all.sql"
       '';
@@ -63,7 +63,7 @@ in
       backupPrepareCommand = ''
         mkdir -p /var/backup/mysql
         ${pkgs.docker}/bin/docker exec romm-db \
-          sh -c "mysqldump -u romm-user -p\"$MYSQL_PASSWORD\" \
+          sh -c "mysqldump -u romm-user -p\"\$MYSQL_PASSWORD\" \
             --all-databases --single-transaction" \
           > /var/backup/mysql/all.sql
       '';

@@ -50,7 +50,12 @@ in
   # Cloudflare Tunnel routes all traffic to https://caddy:443 (a Docker hostname
   # from the previous Proxmox setup). Map it to localhost so cloudflared can
   # reach Caddy without needing Docker networking.
-  networking.hosts."127.0.0.1" = [ "caddy" ];
+  #
+  # wings.schenkenberger.dev is also pinned here: Pelican Panel's own backend
+  # (same host as Wings) talks to the daemon over that public hostname too, so
+  # without this it would hairpin out through Cloudflare and back just to
+  # reach itself.
+  networking.hosts."127.0.0.1" = [ "caddy" "wings.schenkenberger.dev" ];
 
   # ---------------------------------------------------------------------------
   # Caddy — reverse proxy for all services (Cloudflare Tunnel → Caddy → service)
