@@ -96,6 +96,13 @@ in
       # multi-tenant deployment, so a 1-year cap is an acceptable tradeoff
       # against rotating it by hand.
       CODER_MAX_ADMIN_TOKEN_LIFETIME = "8760h";
+      # Coder's browser session token is independent of Authentik's own
+      # session_duration (see authentik/blueprints/session.yaml) — it's
+      # minted fresh on each OIDC login and expires on Coder's own clock.
+      # Default is 24h, which bounced users back through login after any day
+      # of inactivity even though the Authentik SSO session was still valid.
+      # Matches the 2-week Authentik session length.
+      CODER_SESSION_DURATION = "336h";
       # Authentik is the only login path — Coder ships a default, zero-config
       # "Sign in with GitHub" button (its own managed OAuth app) that would
       # otherwise let anyone with a GitHub account sign up, bypassing the
