@@ -1,9 +1,3 @@
-# Pelican Panel + Wings
-#
-# Deploy order for first install:
-#   1. Deploy with wings.enable = false. Log into Panel, create a Node.
-#   2. Copy UUID + token from Panel → Nodes → <node> → Configuration tab
-#      into secrets/pelican.yaml, re-encrypt, set wings.enable = true, redeploy.
 {
   config,
   lib,
@@ -128,16 +122,9 @@ in
     }
   ];
 
-  # Only open Wings SFTP port (2022) when Wings is actually enabled
   networking.firewall.allowedTCPPorts = lib.mkIf config.services.pelican.wings.enable [ config.mylab.ports.wingsSftp ];
 
-  # Upstream nix-pelican only sets After=mysql.service on the setup unit, with
-  # no Requires= and nothing at all for redis. After= alone doesn't pull the
-  # target into the same start transaction — if switch-to-configuration issues
-  # these as separate systemctl calls, there's nothing forcing mysql/redis to
-  # actually be queued (let alone ready) before this runs, and it races them
-  # on every deploy that restarts both. Requires= is what makes the ordering
-  # real.
+  # Requires= enforces startup order; After= alone doesn't guarantee it in systemctl calls
   systemd.services.pelican-panel-setup = {
     after = [ "redis-pelican-panel.service" ];
     requires = [ "mysql.service" "redis-pelican-panel.service" ];
@@ -145,7 +132,7 @@ in
 
   environment.persistence."/persist" = {
     directories = [
-      "/var/lib/pelican-panel" # upstream nix-pelican dataDir default
+      "/var/lib/pelican-panel"
       "/var/lib/pelican-wings"
       "/var/lib/mysql"
     ];

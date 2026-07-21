@@ -10,8 +10,7 @@ let
       tag = "v1.12";
       hash = "sha256-BPG/G6IM95g9ip2OsPmcAebi2ZvKHUpFzV4oquOFLPM=";
     };
-    # The repo's Makefile default target is lint-fix (calls isort/black/ruff),
-    # which aren't in the build sandbox. Nothing to compile here anyway.
+    # Makefile isn't compatible with sandbox and nothing to compile.
     dontBuild = true;
   };
 in
@@ -20,14 +19,12 @@ in
     enable = true;
     listeners = [
       {
-        # Home Assistant connects from localhost
         address = "127.0.0.1";
         port = config.mylab.ports.mosquitto;
         settings.allow_anonymous = true;
       }
       {
-        # Frigate connects via host.docker.internal which resolves to the
-        # docker0 bridge gateway (172.17.0.1) via --add-host=host.docker.internal:host-gateway
+        # Frigate via docker0 bridge gateway for host.docker.internal.
         address = "172.17.0.1";
         port = config.mylab.ports.mosquitto;
         settings.allow_anonymous = true;

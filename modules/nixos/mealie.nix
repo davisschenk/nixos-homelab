@@ -11,8 +11,7 @@ in
     "mail_password" = { sopsFile = mailSopsFile; };
   };
 
-  # credentialsFile must be KEY=value format (systemd EnvironmentFile);
-  # sops.templates interpolates secrets into the file at activation time.
+  # credentialsFile must be KEY=value format for systemd EnvironmentFile.
   sops.templates."mealie-credentials" = {
     content = ''
       OIDC_CLIENT_SECRET=${config.sops.placeholder."mealie_oidc_client_secret"}
@@ -20,8 +19,7 @@ in
       SMTP_PASSWORD=${config.sops.placeholder."mail_password"}
       OPENAI_API_KEY=${config.sops.placeholder."mealie_openai_api_key"}
     '';
-    # mealie uses DynamicUser; mode 0440 + root ownership is fine since
-    # systemd loads EnvironmentFile before dropping privileges.
+    # DynamicUser + systemd loads EnvironmentFile before privilege drop allows 0440.
     mode = "0440";
     restartUnits = [ "mealie.service" ];
   };

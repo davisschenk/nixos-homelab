@@ -3,15 +3,7 @@ let
   p = config.mylab.ports;
 in
 {
-  # ---------------------------------------------------------------------------
-  # Suricata — network IDS watching the physical LAN interface.
-  #
-  # This is deliberately an alerting sensor, not a full packet/flow telemetry
-  # store. Logging DNS, TLS, HTTP and flow events for every connection made the
-  # security dashboard noisy and rapidly consumed Loki storage, while providing
-  # little value in normal operations. Enable a protocol event type temporarily
-  # when investigating a specific incident.
-  # ---------------------------------------------------------------------------
+  # Suricata: alerting-only IDS to avoid dashboard noise and reduce Loki storage consumption
   services.suricata = {
     enable = true;
     disabledRules = [
@@ -63,9 +55,6 @@ in
     };
   };
 
-  # ---------------------------------------------------------------------------
-  # Loki — log aggregation backend. Listens on localhost only.
-  # ---------------------------------------------------------------------------
   services.loki = {
     enable = true;
     configuration = {
@@ -116,12 +105,6 @@ in
     };
   };
 
-  # ---------------------------------------------------------------------------
-  # Vector — log shipping pipeline.
-  #   Source 1: systemd journal  → labels: {job="systemd"}
-  #   Source 2: Suricata EVE alerts → labels suitable for triage
-  # Both sinks push to local Loki via HTTP.
-  # ---------------------------------------------------------------------------
   services.vector = {
     enable = true;
     journaldAccess = true;
@@ -152,14 +135,10 @@ in
           type = "remap";
           inputs = [ "parse_suricata" ];
           source = ''
-            # The EVE file is persisted across reboots and may contain protocol
-            # telemetry written by an earlier configuration. Do not let that
-            # historical noise reach Loki; this pipeline is alert-only.
+            # EVE file persists across reboots; filter to alerts only to avoid historical noise
             if .event_type != "alert" { abort }
 
-            # Keep only low-cardinality fields as Loki labels. Source/destination
-            # addresses and signatures remain in the JSON body: making either a
-            # label would create an unbounded number of Loki streams.
+            # Low-cardinality labels only; IPs/signatures in body avoid unbounded streams
             .alert_severity = string(.alert.severity) ?? "unknown"
             .alert_category = string(.alert.category) ?? "unknown"
             .alert_signature = string(.alert.signature) ?? "unknown"
@@ -202,10 +181,7 @@ in
           inputs = [ "suricata_labels" ];
           endpoint = "http://127.0.0.1:${toString p.loki}";
           encoding.codec = "json";
-          # Label values come from our own remap transforms, not raw
-          # attacker-controlled strings; Vector 0.57's template-confinement
-          # check (requiring a literal string prefix on every templated
-          # field) has nothing to add here.
+          # Safe to allow unconfined templates; values from trusted remap transforms, not raw input
           dangerously_allow_unconfined_template_resolution = true;
           labels = {
             job = "suricata";
@@ -245,11 +221,6 @@ in
     };
   };
 
-  # ---------------------------------------------------------------------------
-  # fail2ban — brute-force protection with incremental banning.
-  # Jails: sshd (journal backend, no log file needed on NixOS).
-  # Prometheus exporter runs on localhost and is scraped by Prometheus.
-  # ---------------------------------------------------------------------------
   services.fail2ban = {
     enable = true;
     maxretry = 5;
@@ -284,14 +255,8 @@ in
     openFirewall = false;
   };
 
-  # ---------------------------------------------------------------------------
-  # Persistence — survive impermanence reboots
-  # ---------------------------------------------------------------------------
-
-  # Impermanence creates bind-mount source dirs as root:root 0755.
-  # Loki runs as the 'loki' system user and needs to own its state dir.
-  # Suricata runs as 'suricata'; its module sets up /var/log/suricata itself,
-  # but we ensure the persist source dir is also correctly owned.
+  # Impermanence creates dirs as root; services need ownership fixed
+  # (Loki: 'loki' user; Suricata: 'suricata' user; fail2ban: root)
   systemd.tmpfiles.rules = [
     "d /persist/var/lib/loki 0700 loki loki -"
     "d /persist/var/log/suricata 0755 suricata suricata -"

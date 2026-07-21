@@ -2,9 +2,7 @@
 let
   p = config.mylab.ports;
 
-  # Extract an *arr API key from its config.xml at service startup.
-  # Writes the plain key to /run/exportarr-keys/<name> so that exportarr's
-  # LoadCredential mechanism can read it without touching sops secrets.
+  # Extract key to /run so LoadCredential can access it without sops secrets.
   mkArrKeyExtractor = name: configPath: {
     "exportarr-${name}-key" = {
       description = "Extract ${name} API key for exportarr";
@@ -26,9 +24,7 @@ let
   };
 in
 {
-  # Grafana secret key managed via SOPS. The file contains just the raw key
-  # string (no YAML structure). Use Grafana's file provider so the key never
-  # lands in the world-readable Nix store.
+  # File provider ensures secret never enters world-readable Nix store.
   sops.secrets."grafana_secret_key" = {
     sopsFile = ../../secrets/grafana.yaml;
     owner = "grafana";
@@ -75,8 +71,7 @@ in
           job_name = "fail2ban";
           static_configs = [ { targets = [ "localhost:${toString p.fail2banExporter}" ]; } ];
         }
-        # Jellyfin does not expose Prometheus metrics without a separate plugin;
-        # removed to avoid scrape errors.
+        # Jellyfin lacks built-in metrics; skip to avoid scrape errors.
       ];
 
       exporters.node = {

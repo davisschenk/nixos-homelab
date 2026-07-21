@@ -8,9 +8,7 @@ let
   nixarrVpnGateway = "192.168.15.1";
 in
 {
-  # ---------------------------------------------------------------------------
-  # Cloudflare Tunnel — sole public ingress, no ports need to be opened
-  # ---------------------------------------------------------------------------
+  # Cloudflare Tunnel sole public ingress; no ports need opening
   sops.secrets."cloudflare_tunnel_token" = {
     sopsFile = ../../secrets/cloudflare-tunnel.yaml;
   };
@@ -47,21 +45,10 @@ in
     };
   };
 
-  # Cloudflare Tunnel routes all traffic to https://caddy:443 (a Docker hostname
-  # from the previous Proxmox setup). Map it to localhost so cloudflared can
-  # reach Caddy without needing Docker networking.
-  #
-  # wings.schenkenberger.dev is also pinned here: Pelican Panel's own backend
-  # (same host as Wings) talks to the daemon over that public hostname too, so
-  # without this it would hairpin out through Cloudflare and back just to
-  # reach itself.
+  # Map caddy to localhost (was Docker hostname in Proxmox setup); hairpin wings.schenkenberger.dev too
   networking.hosts."127.0.0.1" = [ "caddy" "wings.schenkenberger.dev" ];
 
-  # ---------------------------------------------------------------------------
-  # Caddy — reverse proxy for all services (Cloudflare Tunnel → Caddy → service)
-  # Built with the caddy-dns/cloudflare plugin so Caddy handles ACME DNS-01
-  # automatically — no external security.acme needed.
-  # ---------------------------------------------------------------------------
+  # caddy-dns/cloudflare plugin handles DNS-01 challenges without external security.acme
   services.caddy = {
     enable = true;
 
@@ -70,8 +57,7 @@ in
       hash = "sha256-hEHgAG0F0ozHRAPuxEqLyTATBrE+pajeXDiSNwniorg=";
     };
 
-    # Inject the Cloudflare API token so Caddy's DNS-01 challenge can use it
-    # via {env.CLOUDFLARE_API_TOKEN} in the Caddyfile
+    # Cloudflare API token for DNS-01 challenges via {env.CLOUDFLARE_API_TOKEN}
     environmentFile = config.sops.templates."caddy-env".path;
 
     globalConfig = ''
@@ -95,10 +81,6 @@ in
       }
     '';
 
-    # Cloudflare Tunnel connects to https://caddy:443 with originServerName
-    # "*.schenkenberger.dev", so cloudflared sends TLS SNI="*.schenkenberger.dev".
-    # Caddy matches this site block, handles DNS-01 via Cloudflare to obtain a
-    # wildcard cert, then routes by HTTP Host header.
     virtualHosts."*.schenkenberger.dev" = {
       listenAddresses = [ "127.0.0.1" ];
       extraConfig = ''
@@ -109,9 +91,7 @@ in
           reverse_proxy localhost:${toString config.mylab.ports.authentik}
         }
 
-        # Mealie relies on OIDC_AUTO_REDIRECT=true + ALLOW_PASSWORD_LOGIN=false
-        # for authentication. Adding forward-auth here would add defense-in-depth
-        # but is left off intentionally since Mealie's own OIDC is the gate.
+        # Mealie's own OIDC handles auth; forward-auth would add unnecessary hop
         @mealie host mealie.schenkenberger.dev
         handle @mealie {
           reverse_proxy localhost:${toString config.mylab.ports.mealie}
@@ -122,21 +102,18 @@ in
           reverse_proxy localhost:${toString config.mylab.ports.actual}
         }
 
-        # Wealthfolio does its own OIDC via Authentik (WF_OIDC_*) — no
-        # forward-auth, same as Mealie/Actual.
+        # OIDC handled by app; no forward-auth needed
         @wealthfolio host wealthfolio.schenkenberger.dev
         handle @wealthfolio {
           reverse_proxy localhost:${toString config.mylab.ports.wealthfolio}
         }
 
-        # Tilt handles its own OIDC login through Authentik.
         @tilt host tilt.schenkenberger.dev
         handle @tilt {
           reverse_proxy localhost:${toString config.mylab.ports.tilt}
         }
 
-        # Grafana uses oauth_auto_login + disable_login_form; Authentik SSO is
-        # the only login path. forward-auth would add a second redirect hop.
+        # Authentik SSO is only login path; forward-auth would add extra hop
         @grafana host grafana.schenkenberger.dev
         handle @grafana {
           reverse_proxy localhost:${toString config.mylab.ports.grafana}
@@ -171,8 +148,7 @@ in
           reverse_proxy localhost:${toString config.mylab.ports.romm}
         }
 
-        # Jellyfin: native app clients (mobile, smart TV) do not support Authentik
-        # SSO so forward-auth is not used; Jellyfin's own account system gates access.
+        # Native app clients (mobile, Smart TV) lack SSO support; use Jellyfin's auth
         @jellyfin host jellyfin.schenkenberger.dev
         handle @jellyfin {
           reverse_proxy localhost:${toString config.mylab.ports.jellyfin}
@@ -215,27 +191,13 @@ in
           reverse_proxy localhost:${toString config.mylab.ports.homeassistant}
         }
 
-        # Coder does its own OIDC via Authentik (CODER_OIDC_*) — no
-        # forward-auth, same as Mealie/Actual/Wealthfolio/Tilt.
+        # App handles OIDC; no forward-auth
         @coder host coder.schenkenberger.dev
         handle @coder {
           reverse_proxy localhost:${toString config.mylab.ports.coder}
         }
 
-        # Coder proxies each workspace app (code-server) on a
-        # dynamically-generated subdomain (app--[agent--]workspace--owner.<domain>,
-        # e.g. code-server--olive-quelea-87--davisschenkenberger) under
-        # CODER_WILDCARD_ACCESS_URL. That's set to *.schenkenberger.dev (this
-        # same wildcard) rather than a nested *.coder.schenkenberger.dev,
-        # because Cloudflare's edge TLS only covers one level of wildcard per
-        # zone on this plan — a second-level wildcard hostname fails the TLS
-        # handshake at Cloudflare's edge before it ever reaches this Caddy
-        # instance (confirmed: DNS resolves fine, but the ClientHello gets a
-        # handshake-failure alert back from Cloudflare directly). Only forward
-        # hostnames shaped like a workspace app to Coder; everything else
-        # (scanner noise, typos, stale/removed subdomains) gets redirected to
-        # a generic 404 here instead of round-tripping to Coder's branded
-        # error page.
+        # Cloudflare edge TLS only supports one wildcard level; workspace apps use *.schenkenberger.dev
         @coder_app header_regexp Host ^[a-z0-9-]+--[a-z0-9-]+--[a-z0-9-]+(--[a-z0-9-]+)?\.schenkenberger\.dev$
         handle @coder_app {
           reverse_proxy localhost:${toString config.mylab.ports.coder}

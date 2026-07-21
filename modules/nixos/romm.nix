@@ -11,7 +11,6 @@ in
     "romm_igdb_client_secret" = { inherit sopsFile; };
   };
 
-  # Produce a KEY=value EnvironmentFile for the romm container with all secrets
   sops.templates."romm-env" = {
     content = ''
       MYSQL_PASSWORD=${config.sops.placeholder."romm_db_password"}
@@ -118,9 +117,7 @@ in
     };
   };
 
-  # romm container volumes bind directly to /persist (never wiped); no
-  # impermanence bind-mount needed for those paths.
-  # /var/lib/docker is persisted so images survive reboots without re-pulling.
+  # Persist volumes and docker images across reboots.
   environment.persistence."/persist" = {
     directories = [ "/var/lib/docker" ];
   };

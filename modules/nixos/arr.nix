@@ -3,8 +3,7 @@ let
   setAuthExternal = stateDir: pkgs.writeShellScript "set-auth-external" ''
     config="${stateDir}/config.xml"
     if [ -f "$config" ]; then
-      # Delete any existing node then insert a fresh one so this works on
-      # both first boot (node absent) and subsequent boots (node present).
+      # Idempotent: delete and recreate node to handle first boot and subsequent boots.
       ${pkgs.xmlstarlet}/bin/xmlstarlet ed --inplace \
         -d "/Config/AuthenticationMethod" \
         -s "/Config" -t elem -n "AuthenticationMethod" -v "External" \
@@ -56,9 +55,7 @@ in
     qbittorrent.unitConfig.RequiresMountsFor = [ "/data/downloads" ];
   };
 
-  # nixarr only adds a portMapping for qui.internalPort when qui.enable=true.
-  # With qui.enable=false, nixarr adds no webuiPort mapping, so this entry is
-  # load-bearing and must be kept here.
+  # Workaround: nixarr omits webuiPort mapping when qui.enable=false.
   vpnNamespaces.wg.portMappings = [
     {
       from = config.mylab.ports.qbittorrent;

@@ -2,10 +2,7 @@
 {
   sops.secrets."actual_oidc_client_secret" = {
     sopsFile = ../../secrets/actual.yaml;
-    # DynamicUser preStart script runs as the service user and needs to read
-    # this file. Since no fixed UID exists, owner= cannot be used. mode 0444
-    # is acceptable here — the secret also ends up in /run/actual/config.json
-    # which is only readable by the service user anyway.
+    # DynamicUser → no fixed UID; 0444 safe as secret protected in config.json
     mode = "0444";
   };
 

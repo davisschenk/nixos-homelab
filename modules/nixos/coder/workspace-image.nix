@@ -1,8 +1,4 @@
-# Docker image for Coder workspaces. Built on a Debian base (not a from-scratch
-# Nix rootfs) because rustup's downloaded toolchains and code-server's
-# curl-installed release binary are prebuilt, dynamically-linked ELF binaries
-# that expect a real FHS dynamic linker (/lib64/ld-linux-x86-64.so.2), which a
-# from-scratch Nix image doesn't provide.
+# Debian base for dynamically-linked binaries (rustup, code-server).
 { pkgs }:
 let
   baseImage = pkgs.dockerTools.pullImage {
@@ -13,18 +9,10 @@ let
     finalImageTag = "bookworm-slim";
   };
 
-  # GID 131 — must match mangrove's real `docker` group (`getent group docker`
-  # on the host) so the bind-mounted /var/run/docker.sock's group ownership
-  # resolves correctly inside the container (no user-namespace remapping here,
-  # so permission checks are on raw numeric IDs shared with the host).
+  # GID must match host docker group for bind-mounted socket permissions.
   dockerGid = "131";
 
-  # npm's global-install prefix defaults to the same store path as whatever
-  # `npm` binary is running — for nodejs_latest that's inside /nix/store,
-  # which is read-only, so `npm install -g` (used by Coder's
-  # devcontainers-cli module — see ../templates/docker/main.tf) fails with
-  # EACCES. Redirect it into $HOME instead, which the agent's startup_script
-  # already chowns to dev:dev on every start.
+  # Redirect npm install to $HOME (store is read-only).
   npmGlobalPrefix = "/home/dev/.npm-global";
 
   workspaceTools = with pkgs; [
@@ -54,21 +42,12 @@ let
     claude-code
     codex
     just
-    # sea-orm-cli (tilt-app) and leptosfmt (bog-bank) used to live here as
-    # project-specific tools — moved into each repo's own
-    # .devcontainer/devcontainer.json (see templates/docker/main.tf's
-    # coder_devcontainer resources) so a project's toolchain no longer
-    # requires a nixos-homelab rebuild to change.
-    # Nix itself, so nixos-homelab and bog-bank (both ship a flake.nix) can
-    # actually be built/checked from inside a workspace.
+    # Project tools moved to individual repo devcontainer configs.
     nix
-    # Docker CLI + compose plugin only — no daemon in the container. Talks to
-    # the *host's* dockerd over the bind-mounted socket (see main.tf), same
-    # "docker-outside-of-docker" pattern Coder itself uses for provisioning.
+    # Docker-outside-of-docker via host socket.
     docker
     docker-compose
     sudo
-    # Interactive shell environment
     zsh
     zsh-autosuggestions
     zsh-syntax-highlighting
@@ -83,14 +62,7 @@ let
 
   toolsPath = pkgs.lib.makeBinPath workspaceTools;
 
-  # Sourced for every zsh invocation (login or not, interactive or not) —
-  # the zsh equivalent of /etc/profile.d for bash/sh. zsh does NOT read
-  # /etc/profile on its own, so the PATH fix below is separate from (but
-  # mirrors) the bash one in extraCommands. The two plugin paths are only
-  # knowable at image-build time (Nix store hashes), so they can't live in
-  # the (portable, non-Nix) dotfiles repo that manages the rest of zsh's
-  # config — exported here instead and sourced conditionally from
-  # ~/.zshrc (see davisschenk/dotfiles' dot_zshrc.tmpl).
+  # zshenv sourced by all zsh invocations; plugin paths Nix-specific.
   zshenv = pkgs.writeText "zshenv" ''
     export PATH="/usr/local/bin:${toolsPath}:${npmGlobalPrefix}/bin:$PATH"
     export NPM_CONFIG_PREFIX="${npmGlobalPrefix}"
@@ -98,17 +70,7 @@ let
     export ZSH_SYNTAX_HIGHLIGHTING_SH="${pkgs.zsh-syntax-highlighting}/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
   '';
 
-  # `extraCommands` only ever sees the `contents` packages' own symlinkJoin
-  # tree — NOT fromImage's filesystem, so `sed -i` on the base image's real
-  # /etc/passwd fails outright ("No such file or directory": it genuinely
-  # isn't there during this build step). The fix is to ship a full REPLACEMENT
-  # file instead of patching the original — OCI layers apply in order, so a
-  # file present in this (later) layer overrides the same path from fromImage
-  # (an earlier layer) entirely, same mechanism that lets `rm -rf bin lib`
-  # above work. Content below is debian:bookworm-slim's stock /etc/passwd
-  # verbatim, plus a non-root "dev" user (uid/gid 1000, home /home/dev,
-  # zsh as its shell) — the workspace container now runs as this user by
-  # default (see `config.User` below) rather than root.
+  # Full replacement file; OCI layers override earlier files entirely.
   passwd = pkgs.writeText "passwd" ''
     root:x:0:0:root:/root:/bin/bash
     daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
@@ -131,9 +93,6 @@ let
     dev:x:1000:1000:dev:/home/dev:${pkgs.zsh}/bin/zsh
   '';
 
-  # Same reasoning as `passwd` — stock debian:bookworm-slim /etc/group, plus
-  # a "dev" group and a "docker" group at mangrove's real docker GID so the
-  # bind-mounted socket's permissions resolve correctly (see `dockerGid`).
   group = pkgs.writeText "group" ''
     root:x:0:
     daemon:x:1:
@@ -183,28 +142,19 @@ let
     dev ALL=(ALL) NOPASSWD:ALL
   '';
 
-  # A real config file rather than the $NIX_CONFIG env var — sudo resets the
-  # environment by default (only PATH is kept, see `sudoers` above), so
-  # `sudo nix ...` silently lost experimental-features/sandbox=false anyway.
-  # This is read regardless of how nix is invoked.
+  # File persists through sudo environment reset.
   nixConf = pkgs.writeText "nix.conf" ''
     experimental-features = nix-command flakes
     sandbox = false
   '';
 
-  # sudo also goes through PAM for account/session management, not just the
-  # sudoers file — with no /etc/pam.d/sudo at all, PAM refused it outright
-  # ("PAM account management error: Permission denied"). pam_permit.so
-  # always succeeds; fine here since sudoers' NOPASSWD is what's actually
-  # gating access, not PAM.
+  # PAM requires /etc/pam.d/sudo; pam_permit sufficient since sudoers gates access.
   pamSudo = pkgs.writeText "pam-sudo" ''
     auth     sufficient  ${pkgs.linux-pam}/lib/security/pam_permit.so
     account  sufficient  ${pkgs.linux-pam}/lib/security/pam_permit.so
     session  optional    ${pkgs.linux-pam}/lib/security/pam_permit.so
   '';
 
-  # Same reasoning as `passwd`/`group` — stock debian:bookworm-slim /etc/shells,
-  # plus zsh's path.
   shells = pkgs.writeText "shells" ''
     # /etc/shells: valid login shells
     /bin/sh
@@ -224,71 +174,28 @@ pkgs.dockerTools.streamLayeredImage {
   fromImage = baseImage;
   contents = workspaceTools;
   maxLayers = 100;
-  # Registers every `contents` package as a valid path in Nix's own SQLite
-  # database inside the image — without this, the `nix` binary we're now
-  # shipping would have no record of any of these store paths, and running
-  # `nix-collect-garbage` as `dev` could delete the entire curated toolset
-  # right out from under itself.
+  # Register store paths in Nix DB (nix-collect-garbage needs them).
   includeNixDB = true;
-  # `contents` merges every listed package via `symlinkJoin` into ONE
-  # "customisation layer" with top-level bin/, lib/, share/ dirs (this is the
-  # actual mechanism — nixpkgs' dockerTools source confirms it, contrary to
-  # what an earlier version of this comment assumed). On a merged-usr FHS base
-  # like Debian, where /bin and /lib are themselves symlinks to /usr/bin and
-  # /usr/lib, that customisation layer's *real* bin/ and lib/ directories
-  # replace those symlinks outright when layered on top — which took down
-  # every dynamically-linked binary already in the base image (found via a
-  # failing `/usr/bin/grep`: file present, but its interpreter path resolved
-  # through the now-broken /lib symlink to nowhere). Deleting bin/ and lib/
-  # from the customisation layer avoids the collision entirely; nothing here
-  # needs them since PATH below points straight at each package's own
-  # /nix/store output rather than a merged bin/ dir.
+  # rm -rf bin/lib; merged-usr FHS collision would break base image binaries.
   extraCommands = ''
     rm -rf bin lib
 
-    # `contents` only adds packages at their own /nix/store paths — it does not
-    # populate conventional FHS locations like /etc/ssl/certs/ca-certificates.crt.
-    # Not every TLS-using tool respects $SSL_CERT_FILE (some hardcode this exact
-    # path), so materialize a real file there rather than relying on the env var
-    # alone — found the hard way: the Coder agent's own bootstrap script curls
-    # its binary over HTTPS and failed with "error adding trust anchors" without
-    # this, since the path it resolved to (my own SSL_CERT_FILE setting) didn't
-    # exist in a streamed image.
+    # Coder's bootstrap script needs real cert path (not just $SSL_CERT_FILE).
     mkdir -p etc/ssl/certs
     cp ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt etc/ssl/certs/ca-certificates.crt
 
-    # Debian's stock /etc/profile unconditionally overwrites PATH for login
-    # shells (`PATH="/usr/local/sbin:...:/bin"` for root, no reference to
-    # whatever was inherited from the container's own environment) — found
-    # the hard way: `docker exec sh -c` (non-login) saw the right PATH, but
-    # `coder ssh`/the web terminal (which spawn a login shell) got none of
-    # these tools at all. /etc/profile sources every /etc/profile.d/*.sh
-    # *after* resetting PATH, so a script there is the correct, standard
-    # place to re-append it for every shell, login or not.
+    # /etc/profile resets PATH; restore via profile.d for login shells.
     mkdir -p etc/profile.d
     echo 'export PATH="/usr/local/bin:${toolsPath}:${npmGlobalPrefix}/bin:$PATH"' > etc/profile.d/00-nix-tools-path.sh
     echo 'export NPM_CONFIG_PREFIX="${npmGlobalPrefix}"' >> etc/profile.d/00-nix-tools-path.sh
 
-    # zsh as the default interactive shell. Starship + the modern CLI kit
-    # (fzf, zoxide, eza, bat, atuin) are wired up in ~/.zshrc, applied by
-    # Coder's dotfiles integration (davisschenk/dotfiles) rather than baked
-    # in here — only the PATH fix and the two Nix-store-path exports above
-    # are genuinely image-build-time knowledge. Coder's agent looks up the
-    # login shell via /etc/passwd (not $SHELL), so that one has to be a full
-    # replacement file, not a `sed`/`>>` patch — see comment above the
-    # `passwd`/`group`/`shells` definitions for why.
+    # Full replacement file required (Coder agent uses /etc/passwd for login shell).
     cp ${zshenv} etc/zshenv
     cp ${passwd} etc/passwd
     cp ${group} etc/group
     cp ${shells} etc/shells
 
-    # Passwordless sudo for dev — needed for: the one-time chown of the
-    # bind-mounted home dir (Docker auto-creates missing bind-mount sources
-    # as root:root, see main.tf's startup_script), and any Nix store writes,
-    # since /nix/store's pre-existing content here is root-owned. `rm -f`
-    # first: the sudo package's own output ships a default etc/sudoers,
-    # symlinked in via `contents` as a read-only link into the nix store —
-    # `cp` can't overwrite that in place.
+    # Replaces symlinked sudo config from store.
     mkdir -p etc/pam.d
     cp ${pamSudo} etc/pam.d/sudo
 
@@ -296,17 +203,7 @@ pkgs.dockerTools.streamLayeredImage {
     cp ${sudoers} etc/sudoers
     chmod 440 etc/sudoers
 
-    # nixpkgs' sudo binary is deliberately built without the setuid bit
-    # (NixOS instead generates a setuid *wrapper* at activation time via the
-    # security.sudo module — not something available in a plain Docker
-    # image) — found the hard way: sudo refused to run at all ("must be
-    # owned by uid 0 and have the setuid bit set"). `cp -L` dereferences the
-    # symlink into a real, standalone file; the actual chown-to-root +
-    # setuid-chmod happens in `fakeRootCommands` below, not here — plain
-    # `extraCommands` isn't wrapped in fakeroot and `chown 0:0` fails
-    # outright ("Invalid argument") without it. /usr/local/bin is listed
-    # first in PATH specifically so this copy shadows the (non-setuid) one
-    # still reachable via ${toolsPath}.
+    # nixpkgs sudo lacks setuid; fakeRootCommands below applies it.
     mkdir -p usr/local/bin
     cp -L ${pkgs.sudo}/bin/sudo usr/local/bin/sudo
 
@@ -314,8 +211,6 @@ pkgs.dockerTools.streamLayeredImage {
     mkdir -p etc/nix
     cp ${nixConf} etc/nix/nix.conf
   '';
-  # Needs real (faked) root to chown+setuid the sudo copy above — see that
-  # comment for why this can't just be one more line in `extraCommands`.
   fakeRootCommands = ''
     chown 0:0 usr/local/bin/sudo
     chmod 4755 usr/local/bin/sudo

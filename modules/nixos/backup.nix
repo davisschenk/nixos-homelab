@@ -17,10 +17,7 @@ in
   sops.secrets."restic_repository" = { inherit sopsFile; };
   sops.secrets."restic_password" = { inherit sopsFile; };
 
-  # /data/frigate (camera recordings) and /data/media (copyparty files) are
-  # intentionally excluded: recordings are ephemeral by policy and media files
-  # are large enough that object-storage or a separate backup strategy is
-  # preferred. /data/vm (VM disk images) is also excluded due to size.
+  # /data/{frigate,media,vm} excluded: ephemeral/large; use alternative strategies.
   services.restic.backups = {
     persist = commonSettings // {
       paths = [
@@ -75,9 +72,7 @@ in
     };
   };
 
-  # Ensure the persist job (03:00) always runs after the db dump jobs (02:00/02:30)
-  # even when Persistent=true causes catch-up runs after a missed boot.
-  # wants= pulls in the dump jobs in the same transaction so after= can enforce ordering.
+  # wants= + after= enforce db-dump ordering even on catch-up runs after missed boot.
   systemd.services."restic-backups-persist".after = [
     "restic-backups-postgresql.service"
     "restic-backups-mysql.service"
@@ -87,8 +82,7 @@ in
     "restic-backups-mysql.service"
   ];
 
-  # Create backup staging dirs on /persist before impermanence bind-mounts them,
-  # so the directories exist on first boot when the dump jobs run.
+  # Ensure dirs exist before impermanence bind-mounts; needed for first-boot dump jobs.
   systemd.tmpfiles.rules = [
     "d /persist/var/backup/postgresql 0750 postgres postgres -"
     "d /persist/var/backup/mysql      0750 mysql    mysql    -"

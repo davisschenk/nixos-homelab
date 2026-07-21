@@ -8,7 +8,6 @@
   time.timeZone = "America/Denver";
   i18n.defaultLocale = "en_US.UTF-8";
 
-  # Disable mutable users — all users declared in Nix
   users.mutableUsers = false;
 
   users.users.davis = {
@@ -70,8 +69,7 @@
     usbutils
   ];
 
-  # Wipe / on each boot by deleting and recreating the @ btrfs subvolume
-  # Uses systemd initrd (required for NixOS 26.05+; scripted initrd is deprecated)
+  # Required for NixOS 26.05+ (scripted initrd deprecated)
   boot.initrd = {
     systemd.enable = true;
     supportedFilesystems = [ "btrfs" ];
@@ -113,7 +111,6 @@
     };
   };
 
-  # Bind-mount persisted paths from /persist back into the live system
   environment.persistence."/persist" = {
     hideMounts = true;
     files = [
@@ -130,15 +127,7 @@
   # @log subvolume must be mounted before the journal starts writing
   fileSystems."/var/log".neededForBoot = true;
 
-  # sops-nix decrypts secrets using the SSH host key at boot (auto-imported from
-  # services.openssh.hostKeys). No explicit age.keyFile needed.
-
-  # DynamicUser=true services require /var/lib/private to be mode 0700.
-  # Impermanence resets it to 0755 on each activation, and systemd-tmpfiles-resetup
-  # has RemainAfterExit=true so it won't re-run on subsequent switches to fix it.
-  # Fix: force RemainAfterExit=false so tmpfiles re-runs every activation, and
-  # also enforce the correct mode on the persist source so impermanence copies 0700.
-  # See: https://github.com/nix-community/impermanence/issues/254
+  # Workaround: impermanence resets /var/lib/private; force tmpfiles re-run (see issue #254)
   systemd.tmpfiles.rules = [
     "d /persist/var/lib/private 0700 root root -"
     "e /var/lib/private 0700 root root -"

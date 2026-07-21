@@ -24,8 +24,7 @@
     "media"
   ];
 
-  # Impermanence creates the /persist source dirs as root:root when they
-  # don't exist yet. Jellyfin needs to own its cache dir, so enforce it here.
+  # Impermanence creates dirs as root:root; enforce jellyfin ownership.
   systemd.tmpfiles.rules = [
     "d /persist/var/cache/jellyfin 0700 jellyfin jellyfin -"
   ];
