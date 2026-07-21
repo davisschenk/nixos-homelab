@@ -124,14 +124,6 @@
       packages.${system} = {
         mangrove-iso =
           self.nixosConfigurations.mangrove-iso.config.system.build.images."iso-installer";
-
-        coder-workspace-image = import ./modules/nixos/coder/workspace-image.nix {
-          # claude-code is unfree; allow without affecting default pkgs
-          pkgs = import nixpkgs {
-            inherit system;
-            config.allowUnfreePredicate = pkg: builtins.elem (nixpkgs.lib.getName pkg) [ "claude-code" ];
-          };
-        };
       };
     };
 }

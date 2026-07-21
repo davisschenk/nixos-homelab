@@ -30,11 +30,15 @@ in
         "/persist/var/lib/postgresql"
         "/persist/etc/ssh/ssh_host_ed25519_key"
         "/persist/etc/sops/age/keys.txt"
-        # Regenerable build artifacts inside Coder workspaces
-        "/persist/coder/workspaces/*/node_modules"
-        "/persist/coder/workspaces/*/target"
-        "/persist/coder/workspaces/*/.venv"
-        "/persist/coder/workspaces/*/.cache"
+        # Regenerable build artifacts inside Coder workspaces. Envbuilder
+        # clones one level deeper than the old template did
+        # (workspaces/<name>/<repo>/... instead of workspaces/<name>/...).
+        "/persist/coder/workspaces/*/*/node_modules"
+        "/persist/coder/workspaces/*/*/target"
+        "/persist/coder/workspaces/*/*/.venv"
+        "/persist/coder/workspaces/*/*/.cache"
+        # Reinstalled from scratch by coder_agent's startup script.
+        "/persist/coder/workspaces/*/.coder-tools"
       ];
       timerConfig = {
         OnCalendar = "03:00";

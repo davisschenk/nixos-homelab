@@ -2,12 +2,10 @@
 { config, pkgs, lib, ... }:
 let
   sopsFile = ../../../secrets/coder.yaml;
-  coderWorkspaceImage = import ./workspace-image.nix { inherit pkgs; };
 in
 {
-  # terraform (BSL-1.1) and claude-code are both marked unfree in nixpkgs.
-  nixpkgs.config.allowUnfreePredicate =
-    pkg: builtins.elem (lib.getName pkg) [ "terraform" "claude-code" ];
+  # terraform is marked unfree (BSL-1.1) in nixpkgs.
+  nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [ "terraform" ];
 
   sops.secrets."coder_oidc_client_secret" = { inherit sopsFile; };
   sops.secrets."coder_api_token" = { inherit sopsFile; };
@@ -98,25 +96,6 @@ in
   ];
 
   systemd.services.coder.unitConfig.RequiresMountsFor = [ "/persist/coder/workspaces" ];
-
-  # Root subvolume wiped every boot, so workspace image must be reloaded at each daemon start.
-  systemd.services.coder-workspace-image-load = {
-    description = "Load the Coder workspace Docker image into the local daemon";
-    after = [ "docker.service" ];
-    requires = [ "docker.service" ];
-    wantedBy = [ "multi-user.target" ];
-    # Forces a re-run on `nixos-rebuild switch` even though this oneshot is
-    # "inactive (dead)" after boot and wouldn't otherwise restart just because
-    # its ExecStart store path changed.
-    restartTriggers = [ coderWorkspaceImage ];
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = false;
-      ExecStart = pkgs.writeShellScript "load-coder-workspace-image" ''
-        ${coderWorkspaceImage} | ${pkgs.docker}/bin/docker load
-      '';
-    };
-  };
 
   # Restart=on-failure tolerates coderd startup races; after/requires don't guarantee coderd is serving.
   systemd.services.coder-templates-push = {

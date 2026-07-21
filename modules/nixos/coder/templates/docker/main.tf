@@ -1,6 +1,7 @@
-# Coder workspace template: Docker containers on the same host running
-# Nix-built "coder-workspace:latest" (see ../../workspace-image.nix,
-# loaded into the daemon by the coder-workspace-image-load systemd unit).
+# Coder workspace template: one Docker container per workspace, built
+# directly from the chosen repo's .devcontainer/devcontainer.json by
+# envbuilder (https://github.com/coder/envbuilder) — no custom base image
+# to build or load, unlike the old workspace-image.nix approach.
 #
 # Not deployed via Nix — push with:
 #   coder login https://coder.schenkenberger.dev
@@ -17,6 +18,9 @@ terraform {
       source  = "kreuzwerker/docker"
       version = "~> 4.0"
     }
+    envbuilder = {
+      source = "coder/envbuilder"
+    }
   }
 }
 
@@ -24,208 +28,92 @@ data "coder_provisioner" "me" {}
 data "coder_workspace" "me" {}
 data "coder_workspace_owner" "me" {}
 
-# GitHub external auth (see ../../default.nix's CODER_EXTERNAL_AUTH_0_* for
-# the custom OAuth app this points at). `optional = true` so a workspace can
-# still be created/started before the owner links it — git-over-SSH via
-# `coder gitssh` keeps working as the fallback either way (Coder tries
-# external-auth tokens first, falls back to SSH automatically). The token
-# below feeds GH_TOKEN, which `gh` reads natively.
+# No longer optional: envbuilder clones over HTTPS with this token before
+# the agent (and therefore `coder gitssh`) exists, so unlike the pre-envbuilder
+# template there's no SSH fallback — a workspace can't build without it.
 data "coder_external_auth" "github" {
   id       = "primary-github"
-  optional = true
+  optional = false
 }
 
-resource "coder_agent" "main" {
-  arch = data.coder_provisioner.me.arch
-  os   = "linux"
-  # No `dir` — deprecated in favor of just leaving it at $HOME (/home/dev,
-  # per the image's non-root "dev" user).
+# One workspace = one repo now — envbuilder builds a single devcontainer.json
+# per container, so the old "clone all three projects into one workspace"
+# model doesn't apply. Immutable: the persistent bind mount below is keyed to
+# whichever repo first built it, so changing this on an existing workspace
+# would leave stale build state sitting next to the new repo's clone.
+data "coder_parameter" "repo" {
+  name         = "repo"
+  display_name = "Repository"
+  description  = "Project to clone and build via its .devcontainer/devcontainer.json."
+  mutable      = false
+  order        = 1
 
-  env = {
-    GIT_AUTHOR_NAME     = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
-    GIT_AUTHOR_EMAIL    = data.coder_workspace_owner.me.email
-    GIT_COMMITTER_NAME  = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
-    GIT_COMMITTER_EMAIL = data.coder_workspace_owner.me.email
-    GH_TOKEN            = try(data.coder_external_auth.github.access_token, "")
+  option {
+    name  = "nixos-homelab"
+    value = "https://github.com/davisschenk/nixos-homelab.git"
+    icon  = "/icon/github.svg"
   }
-
-  # Runs once when the agent starts. Sets up git identity and clones the
-  # standing project set on first start. Git-over-SSH auth is handled by
-  # Coder itself — every workspace's agent transparently wraps `ssh` via
-  # `coder gitssh` using a per-user key Coder generates and manages (`coder
-  # publickey`), so no key material needs to be provisioned here at all;
-  # the user adds that one Coder-managed public key to GitHub once, and it
-  # works for every workspace they ever create. Host key verification still
-  # needs a populated known_hosts, though — `coder gitssh` doesn't relax
-  # that on its own (confirmed: cloning failed with "Host key verification
-  # failed" until known_hosts was seeded here). No `set -e` — a failure
-  # cloning one repo (or a transient ssh-keyscan network hiccup on
-  # container start) shouldn't block git config or the other clones.
-  # $HOME is bind-mounted from /persist/coder/workspaces/<name>, so this is
-  # idempotent across stop/start — already-cloned repos are left alone,
-  # never re-cloned or clobbered.
-  startup_script = <<-EOT
-    # Docker auto-creates a missing bind-mount source as root:root, and the
-    # container itself runs as non-root "dev" (uid 1000) — without this,
-    # the very first command below would fail with permission denied on
-    # $HOME. Recursive, since workspaces migrated from the old root-based
-    # image have existing repo contents owned root:root all the way down.
-    # Gated on a sentinel file rather than $HOME's own ownership — $HOME
-    # itself can already read as dev:dev (e.g. Docker set it that way, or a
-    # prior partial fix touched it) while everything underneath is still
-    # root:root, which would make an ownership-based check skip the walk
-    # and leave the real problem in place (hit this exact case on a real
-    # migrated workspace). Recursive chown covers $HOME itself too, so no
-    # separate non-recursive chown is needed before this.
-    if [ ! -f "$HOME/.chown-done" ]; then
-      sudo chown -R dev:dev "$HOME"
-      touch "$HOME/.chown-done"
-    fi
-
-    # zsh's new-user-install wizard checks for a ~/.zshrc specifically (system-
-    # wide /etc/zshrc doesn't satisfy it) and otherwise blocks the very first
-    # interactive shell with an interactive prompt. Idempotent no-op after
-    # the first start.
-    touch ~/.zshrc
-
-    git config --global user.name "${coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)}"
-    git config --global user.email "${data.coder_workspace_owner.me.email}"
-
-    mkdir -p ~/.ssh
-    touch ~/.ssh/known_hosts
-    for i in 1 2 3 4 5; do
-      ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null && break
-      sleep 2
-    done
-
-    clone_if_missing() {
-      dest="$HOME/$2"
-      if [ ! -d "$dest" ]; then
-        git clone "$1" "$dest"
-      fi
-    }
-    clone_if_missing git@github.com:davisschenk/nixos-homelab.git nixos-homelab
-    clone_if_missing git@github.com:davisschenk/tilt-app.git tilt-app
-    clone_if_missing git@github.com:davisschenk/bog-bank.git bog-bank
-  EOT
+  option {
+    name  = "tilt-app"
+    value = "https://github.com/davisschenk/tilt-app.git"
+    icon  = "/icon/github.svg"
+  }
+  option {
+    name  = "bog-bank"
+    value = "https://github.com/davisschenk/bog-bank.git"
+    icon  = "/icon/github.svg"
+  }
 }
 
-# Applies davisschenk/dotfiles on every agent start (chezmoi-managed zsh
-# config + starship's Pure preset — see that repo's install.sh/README).
-# No hardcoded `dotfiles_uri`: leaving it to `default_dotfiles_uri` instead
-# means the module exposes its own `coder_parameter`, pre-filled with this
-# default but overridable per-user — same "per-user config isn't a Nix/
-# Terraform hardcode" philosophy as the Claude Code/Codex/gh auth setup
-# documented in ../../default.nix.
-module "dotfiles" {
-  count                = data.coder_workspace.me.start_count
-  source               = "registry.coder.com/coder/dotfiles/coder"
-  version              = "~> 1.4"
-  agent_id             = coder_agent.main.id
-  default_dotfiles_uri = "https://github.com/davisschenk/dotfiles"
-}
-
-# VS Code in the browser, proxied by Coder under the *.schenkenberger.dev
-# wildcard (see networking.nix) — this is what makes the workspace "easily
-# accessible" from a browser without any local editor setup.
-module "code-server" {
-  count     = data.coder_workspace.me.start_count
-  source    = "registry.coder.com/coder/code-server/coder"
-  version   = "~> 1.5"
-  agent_id  = coder_agent.main.id
-  folder    = "/home/dev"
-  order     = 1
-  subdomain = true
-}
-
-# One button per project, opening code-server (the same instance the module
-# above starts on :13337) straight into that project's folder — the
-# `?folder=` query param is exactly how the module's own "code-server" app
-# does it (confirmed from registry.coder.com/coder/code-server's source),
-# so these just point the same port at different folders.
 locals {
-  projects = ["nixos-homelab", "tilt-app", "bog-bank"]
-}
+  repo_url  = data.coder_parameter.repo.value
+  repo_name = trimsuffix(basename(local.repo_url), ".git")
 
-resource "coder_app" "project" {
-  for_each     = data.coder_workspace.me.start_count > 0 ? toset(local.projects) : toset([])
-  agent_id     = coder_agent.main.id
-  slug         = each.value
-  display_name = each.value
-  url          = "http://localhost:13337/?folder=${urlencode("/home/dev/${each.value}")}"
-  icon         = "/icon/code.svg"
-  subdomain    = true
-  order        = 2
+  # /persist survives reboots (root fs doesn't); /workspaces is where the
+  # container sees it. Bind-mounted (not docker_volume) for the same reason
+  # the old template was: /var/lib/docker is wiped every boot.
+  workspace_host_dir = "/persist/coder/workspaces/${data.coder_workspace.me.name}"
+  workspace_dir      = "/workspaces/${local.repo_name}"
+  tools_dir          = "/workspaces/.coder-tools"
 
-  healthcheck {
-    url       = "http://localhost:13337/healthz"
-    interval  = 5
-    threshold = 6
+  git_author_name  = coalesce(data.coder_workspace_owner.me.full_name, data.coder_workspace_owner.me.name)
+  git_author_email = data.coder_workspace_owner.me.email
+
+  # Pin a real release, not :latest — see https://github.com/coder/envbuilder/pkgs/container/envbuilder
+  devcontainer_builder_image = "ghcr.io/coder/envbuilder:v1.3.0"
+
+  envbuilder_env = {
+    ENVBUILDER_GIT_URL = local.repo_url
+    # GitHub accepts any non-empty username when the password is a valid
+    # OAuth/App token — "x-access-token" is GitHub's documented placeholder.
+    ENVBUILDER_GIT_USERNAME     = "x-access-token"
+    ENVBUILDER_GIT_PASSWORD     = data.coder_external_auth.github.access_token
+    ENVBUILDER_WORKSPACE_FOLDER = local.workspace_dir
+    ENVBUILDER_FALLBACK_IMAGE   = "codercom/enterprise-base:ubuntu"
+    ENVBUILDER_INIT_SCRIPT      = coder_agent.main.init_script
+    CODER_AGENT_TOKEN           = coder_agent.main.token
+    # access_url is already a public hostname (coder.schenkenberger.dev), not
+    # localhost, so unlike Coder's single-machine reference templates there's
+    # no need to rewrite it to host.docker.internal for the container to reach it.
+    CODER_AGENT_URL = data.coder_workspace.me.access_url
   }
+
+  docker_env = [for k, v in local.envbuilder_env : "${k}=${v}"]
 }
 
-# Dev Containers integration — installs @devcontainers/cli on the parent
-# agent (this workspace already bind-mounts the host's docker.sock below,
-# which is exactly this module's prerequisite) so each project can define
-# its own tools in its own .devcontainer/devcontainer.json instead of
-# everything living in ../../workspace-image.nix. Each dev container that
-# exists shows up in the Coder dashboard as a sub-agent with its own
-# apps/SSH/port forwarding.
-#
-# All three projects now carry their own .devcontainer/devcontainer.json
-# (each authored + build-tested with @devcontainers/cli directly, not just
-# hand-written): nixos-homelab installs the just/nixd/statix/deadnix/sops
-# toolchain via the nix feature's `packages` option; bog-bank installs Nix +
-# direnv and activates its own flake.nix devShell (single source of truth
-# for cargo/leptosfmt/etc, nothing to keep in sync here); tilt-app installs
-# rust + node features plus sea-orm-cli via postCreateCommand (needs
-# pkg-config + libssl-dev first — sea-orm's sqlx-postgres backend links
-# native OpenSSL). Once these are in day-to-day use, sea-orm-cli and
-# leptosfmt can come out of ../../workspace-image.nix — left in place for
-# now since removing them today would break anyone still relying on the
-# outer shell before switching over.
-module "devcontainers-cli" {
-  count    = data.coder_workspace.me.start_count
-  source   = "registry.coder.com/coder/devcontainers-cli/coder"
-  version  = "~> 1.0"
-  agent_id = coder_agent.main.id
-}
-
-resource "coder_devcontainer" "project" {
-  for_each   = data.coder_workspace.me.start_count > 0 ? toset(local.projects) : toset([])
-  depends_on = [module.devcontainers-cli]
-  agent_id   = coder_agent.main.id
-  # Must be the host-identical path (see the second "docker_container.workspace"
-  # volumes block below), not "/home/dev/${each.value}" — devcontainers-cli
-  # runs `docker run --mount type=bind,source=<workspace_folder>,...` against
-  # the *host's* daemon (docker-outside-of-docker), so the path it passes has
-  # to already exist on the host, not just inside this container. Confirmed
-  # on a real deploy: "/home/dev/bog-bank" failed with "bind source path does
-  # not exist" because that exact path is only valid in here, not on mangrove.
-  workspace_folder = "/persist/coder/workspaces/${data.coder_workspace.me.name}/${each.value}"
-}
-
-# Looked up rather than pulled/built — must already be present in the local
-# daemon (loaded by coder-workspace-image-load.service), errors clearly if not.
-data "docker_image" "workspace" {
-  name = "coder-workspace:latest"
+resource "docker_image" "devcontainer_builder" {
+  name         = local.devcontainer_builder_image
+  keep_locally = true
 }
 
 resource "docker_container" "workspace" {
-  count      = data.coder_workspace.me.start_count
-  image      = data.docker_image.workspace.id
-  name       = "coder-${data.coder_workspace_owner.me.name}-${lower(data.coder_workspace.me.name)}"
-  hostname   = data.coder_workspace.me.name
-  entrypoint = ["sh", "-c", coder_agent.main.init_script]
-  env        = ["CODER_AGENT_TOKEN=${coder_agent.main.token}"]
+  count    = data.coder_workspace.me.start_count
+  image    = docker_image.devcontainer_builder.image_id
+  name     = "coder-${data.coder_workspace_owner.me.name}-${lower(data.coder_workspace.me.name)}"
+  hostname = data.coder_workspace.me.name
+  env      = local.docker_env
 
-  # The container's /etc/group lists "dev" as a member of "docker" (gid 131,
-  # matching mangrove's real docker group), but that mapping alone doesn't
-  # apply supplementary groups to the running process — Docker sets a
-  # container process's groups explicitly at creation, it doesn't consult
-  # NSS/group file membership at runtime. Without this, `docker ps` inside
-  # the workspace fails with "permission denied" on the bind-mounted socket
-  # despite /etc/group looking correct (confirmed on a real deploy).
+  # docker GID on mangrove — see the docker.sock mount below.
   group_add = ["131"]
 
   host {
@@ -233,36 +121,23 @@ resource "docker_container" "workspace" {
     ip   = "host-gateway"
   }
 
-  # Bind mount, not a docker_volume — /var/lib/docker (and any named volume
-  # in it) is wiped on every host reboot, /persist is not. Docker
-  # auto-creates this as root:root on first use since it doesn't exist yet;
-  # the agent's startup_script chowns it to dev:dev on every start (a no-op
-  # once already correct).
   volumes {
-    host_path      = "/persist/coder/workspaces/${data.coder_workspace.me.name}"
-    container_path = "/home/dev"
+    host_path      = local.workspace_host_dir
+    container_path = "/workspaces"
     read_only      = false
   }
 
-  # The same host directory, mounted a second time at its own host-identical
-  # path. Docker-outside-of-Docker (below) means devcontainers-cli's bind
-  # mounts get resolved by the *host's* dockerd, not this container's
-  # filesystem — a source path only valid in here (like "/home/dev/bog-bank")
-  # doesn't exist over there. Mounting the same directory again at the literal
-  # host path gives devcontainers-cli something that resolves on both sides
-  # (see coder_devcontainer.project's workspace_folder). Writes through either
-  # mount land in the same underlying host directory, so there's nothing to
-  # keep in sync.
+  # Same host dir, mirrored at its own host-identical path — devcontainer
+  # features like docker-outside-of-docker bind-mount source paths that get
+  # resolved by the *host's* dockerd, not this container's filesystem, so a
+  # path only valid in here (like "/workspaces/bog-bank") doesn't exist there.
   volumes {
-    host_path      = "/persist/coder/workspaces/${data.coder_workspace.me.name}"
-    container_path = "/persist/coder/workspaces/${data.coder_workspace.me.name}"
+    host_path      = local.workspace_host_dir
+    container_path = local.workspace_host_dir
     read_only      = false
   }
 
-  # Docker-outside-of-Docker: the workspace container has no daemon of its
-  # own, just the CLI + compose plugin, talking to the *host's* dockerd over
-  # its socket — the same pattern Coder itself uses for provisioning. This is
-  # why the image's "docker" group is set to mangrove's real docker GID (131).
+  # Docker-outside-of-Docker: no daemon of its own, talks to the host's.
   volumes {
     host_path      = "/var/run/docker.sock"
     container_path = "/var/run/docker.sock"
@@ -277,4 +152,105 @@ resource "docker_container" "workspace" {
     label = "coder.workspace_id"
     value = data.coder_workspace.me.id
   }
+}
+
+resource "coder_agent" "main" {
+  arch = data.coder_provisioner.me.arch
+  os   = "linux"
+  dir  = local.workspace_dir
+
+  env = {
+    GIT_AUTHOR_NAME     = local.git_author_name
+    GIT_AUTHOR_EMAIL    = local.git_author_email
+    GIT_COMMITTER_NAME  = local.git_author_name
+    GIT_COMMITTER_EMAIL = local.git_author_email
+    # $PATH is expanded by the shell Coder uses to launch sessions.
+    PATH = "${local.tools_dir}/bin:$PATH"
+  }
+
+  # docker_container.workspace is a `count` resource, so it's destroyed and
+  # rebuilt by envbuilder on every workspace stop/start — only /workspaces
+  # (the bind mount) survives that. apt packages land outside it and are
+  # reinstalled every start (cheap); curl/npm-installed tools go into the
+  # persisted $TOOLS_DIR instead, gated by a sentinel there, so those install
+  # exactly once for the life of the workspace. Generic CLI polish
+  # (starship/atuin/zoxide/etc.) lives here instead of duplicated across
+  # every repo's devcontainer.json — devcontainer.json stays project-specific.
+  startup_script = <<-EOT
+    set -u
+    TOOLS_DIR="${local.tools_dir}"
+    mkdir -p "$TOOLS_DIR/bin"
+
+    if command -v apt-get >/dev/null 2>&1; then
+      sudo apt-get update -qq
+      for pkg in zsh jq tmux direnv fzf ripgrep bat nodejs npm; do
+        dpkg -s "$pkg" >/dev/null 2>&1 || sudo apt-get install -y "$pkg" >/dev/null 2>&1
+      done
+      [ -x /usr/bin/batcat ] && ln -sf /usr/bin/batcat "$TOOLS_DIR/bin/bat"
+
+      command -v gh >/dev/null 2>&1 || {
+        curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo tee /usr/share/keyrings/githubcli-archive-keyring.gpg >/dev/null
+        sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+        echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null
+        sudo apt-get update -qq && sudo apt-get install -y gh >/dev/null 2>&1
+      }
+
+      current_shell=$(getent passwd "$(whoami)" | cut -d: -f7)
+      [ "$current_shell" = "$(command -v zsh)" ] || sudo chsh -s "$(command -v zsh)" "$(whoami)"
+    fi
+
+    if [ ! -f "$TOOLS_DIR/.installed" ]; then
+      curl -fsSL https://starship.rs/install.sh | sh -s -- -y -b "$TOOLS_DIR/bin" >/dev/null 2>&1
+      BIN_DIR="$TOOLS_DIR/bin" sh -c "$(curl -fsSL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh)" >/dev/null 2>&1
+      curl --proto '=https' --tlsv1.2 -fsSf https://setup.atuin.sh | sh -s -- --no-modify-path >/dev/null 2>&1
+      [ -x "$HOME/.atuin/bin/atuin" ] && ln -sf "$HOME/.atuin/bin/atuin" "$TOOLS_DIR/bin/atuin"
+      curl -fsSL https://just.systems/install.sh | bash -s -- --to "$TOOLS_DIR/bin" >/dev/null 2>&1
+      npm install -g --prefix "$TOOLS_DIR" @anthropic-ai/claude-code @openai/codex >/dev/null 2>&1
+      touch "$TOOLS_DIR/.installed"
+    fi
+  EOT
+
+  metadata {
+    display_name = "CPU Usage"
+    key          = "0_cpu_usage"
+    script       = "coder stat cpu"
+    interval     = 10
+    timeout      = 1
+  }
+  metadata {
+    display_name = "RAM Usage"
+    key          = "1_ram_usage"
+    script       = "coder stat mem"
+    interval     = 10
+    timeout      = 1
+  }
+  metadata {
+    display_name = "Home Disk"
+    key          = "2_home_disk"
+    script       = "coder stat disk --path $HOME"
+    interval     = 60
+    timeout      = 1
+  }
+}
+
+# Applies davisschenk/dotfiles on every agent start (chezmoi-managed zsh
+# config + starship's Pure preset — see that repo's install.sh/README).
+module "dotfiles" {
+  count                = data.coder_workspace.me.start_count
+  source               = "registry.coder.com/coder/dotfiles/coder"
+  version              = "~> 1.4"
+  agent_id             = coder_agent.main.id
+  default_dotfiles_uri = "https://github.com/davisschenk/dotfiles"
+}
+
+# Single instance now — one workspace is one project, so there's no more
+# per-project folder-switcher buttons alongside this.
+module "code-server" {
+  count     = data.coder_workspace.me.start_count
+  source    = "registry.coder.com/coder/code-server/coder"
+  version   = "~> 1.5"
+  agent_id  = coder_agent.main.id
+  folder    = local.workspace_dir
+  order     = 1
+  subdomain = true
 }
