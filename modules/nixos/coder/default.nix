@@ -22,15 +22,23 @@ in
     restartUnits = [ "coder.service" ];
   };
 
-  # Long-lived API token for non-interactive template pushes; TF_VAR_* here
-  # is picked up by Terraform automatically, no per-template wiring needed.
+  # Long-lived API token for non-interactive template pushes.
   sops.templates."coder-templates-push-env" = {
     content = ''
       CODER_URL=https://coder.schenkenberger.dev
       CODER_SESSION_TOKEN=${config.sops.placeholder."coder_api_token"}
-      TF_VAR_claude_code_oauth_token=${config.sops.placeholder."coder_claude_code_oauth_token"}
     '';
-    restartUnits = [ "coder-templates-push.service" "coder-templates-push-tasks.service" ];
+    restartUnits = [ "coder-templates-push.service" ];
+  };
+
+  # `coder templates push` doesn't read TF_VAR_* (that's a plain-terraform
+  # convention) — it only takes --var/--variables-file, hence a YAML file
+  # instead of another env line on coder-templates-push-env.
+  sops.templates."coder-templates-push-tasks-vars" = {
+    content = ''
+      claude_code_oauth_token: "${config.sops.placeholder."coder_claude_code_oauth_token"}"
+    '';
+    restartUnits = [ "coder-templates-push-tasks.service" ];
   };
 
   services.coder = {
@@ -133,7 +141,7 @@ in
       Type = "oneshot";
       RemainAfterExit = false;
       EnvironmentFile = config.sops.templates."coder-templates-push-env".path;
-      ExecStart = "${pkgs.coder}/bin/coder templates push claude-tasks --directory ${./templates/tasks} --yes";
+      ExecStart = "${pkgs.coder}/bin/coder templates push claude-tasks --directory ${./templates/tasks} --variables-file ${config.sops.templates."coder-templates-push-tasks-vars".path} --yes";
       Restart = "on-failure";
       RestartSec = "10s";
     };
