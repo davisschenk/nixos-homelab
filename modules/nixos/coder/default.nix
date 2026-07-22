@@ -11,6 +11,7 @@ in
   sops.secrets."coder_api_token" = { inherit sopsFile; };
   sops.secrets."coder_github_client_id" = { inherit sopsFile; };
   sops.secrets."coder_github_client_secret" = { inherit sopsFile; };
+  sops.secrets."coder_claude_code_oauth_token" = { inherit sopsFile; };
 
   sops.templates."coder-env" = {
     content = ''
@@ -21,13 +22,15 @@ in
     restartUnits = [ "coder.service" ];
   };
 
-  # Long-lived API token for non-interactive template pushes.
+  # Long-lived API token for non-interactive template pushes; TF_VAR_* here
+  # is picked up by Terraform automatically, no per-template wiring needed.
   sops.templates."coder-templates-push-env" = {
     content = ''
       CODER_URL=https://coder.schenkenberger.dev
       CODER_SESSION_TOKEN=${config.sops.placeholder."coder_api_token"}
+      TF_VAR_claude_code_oauth_token=${config.sops.placeholder."coder_claude_code_oauth_token"}
     '';
-    restartUnits = [ "coder-templates-push.service" ];
+    restartUnits = [ "coder-templates-push.service" "coder-templates-push-tasks.service" ];
   };
 
   services.coder = {
@@ -110,6 +113,27 @@ in
       RemainAfterExit = false;
       EnvironmentFile = config.sops.templates."coder-templates-push-env".path;
       ExecStart = "${pkgs.coder}/bin/coder templates push docker-dev --directory ${./templates/docker} --yes";
+      Restart = "on-failure";
+      RestartSec = "10s";
+    };
+    unitConfig = {
+      StartLimitIntervalSec = 300;
+      StartLimitBurst = 10;
+    };
+  };
+
+  systemd.services.coder-templates-push-tasks = {
+    description = "Push the Coder Claude Tasks workspace template";
+    after = [ "coder.service" ];
+    requires = [ "coder.service" ];
+    wantedBy = [ "multi-user.target" ];
+    restartTriggers = [ ./templates/tasks/main.tf ];
+    path = [ pkgs.terraform ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = false;
+      EnvironmentFile = config.sops.templates."coder-templates-push-env".path;
+      ExecStart = "${pkgs.coder}/bin/coder templates push claude-tasks --directory ${./templates/tasks} --yes";
       Restart = "on-failure";
       RestartSec = "10s";
     };
