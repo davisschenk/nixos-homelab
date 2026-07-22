@@ -1,6 +1,10 @@
 {
   "name": "nixos-homelab",
   "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+  // envbuilder only reliably honors containerUser, not remoteUser, for the
+  // actual session user — see https://github.com/coder/envbuilder/issues/483
+  "containerUser": "vscode",
+  "remoteUser": "vscode",
   "features": {
     "ghcr.io/devcontainers/features/nix:1": {
       "multiUser": false,
