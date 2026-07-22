@@ -80,7 +80,7 @@ locals {
   git_author_email = data.coder_workspace_owner.me.email
 
   # Pin a real release, not :latest — see https://github.com/coder/envbuilder/pkgs/container/envbuilder
-  devcontainer_builder_image = "ghcr.io/coder/envbuilder:v1.3.0"
+  devcontainer_builder_image = "ghcr.io/coder/envbuilder:1.3.0"
 
   envbuilder_env = {
     ENVBUILDER_GIT_URL = local.repo_url
