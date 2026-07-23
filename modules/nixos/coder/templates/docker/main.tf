@@ -138,9 +138,16 @@ resource "docker_container" "workspace" {
   }
 
   # Docker-outside-of-Docker: no daemon of its own, talks to the host's.
+  # Mounted at docker-host.sock, not docker.sock directly — that's the path
+  # the devcontainers docker-outside-of-docker feature expects the real
+  # socket at, so it can install the CLI and symlink docker.sock -> this
+  # itself. Mounting straight to docker.sock collides with that symlink
+  # ("File exists"), which fails the feature install and silently falls
+  # envbuilder back to a bare image with no containerUser — see the repo
+  # this was debugged against (bog-bank) for the failure mode.
   volumes {
     host_path      = "/var/run/docker.sock"
-    container_path = "/var/run/docker.sock"
+    container_path = "/var/run/docker-host.sock"
     read_only      = false
   }
 
