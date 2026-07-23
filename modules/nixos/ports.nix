@@ -156,5 +156,10 @@
       default = 25565;
       description = "Minecraft server listen port.";
     };
+    novnc = lib.mkOption {
+      type = lib.types.port;
+      default = 6080;
+      description = "noVNC web console proxy listen port (libvirt VM console access).";
+    };
   };
 }

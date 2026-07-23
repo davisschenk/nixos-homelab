@@ -25,6 +25,7 @@ let
     "tilt"
     "coder"
     "session"
+    "vm-console"
   ];
 
   customBlueprintsDir = pkgs.runCommand "authentik-blueprints" { } ''
