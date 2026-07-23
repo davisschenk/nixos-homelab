@@ -17,3 +17,4 @@ entries:
         - !Find [authentik_providers_proxy.proxyprovider, [name, Copyparty Provider]]
         - !Find [authentik_providers_proxy.proxyprovider, [name, Frigate Provider]]
         - !Find [authentik_providers_proxy.proxyprovider, [name, Home Assistant Provider]]
+        - !Find [authentik_providers_proxy.proxyprovider, [name, VM Console Provider]]

@@ -12,6 +12,7 @@
     ./romm.nix
     ./pelican.nix
     ./gaming-vm.nix
+    ./vm-console.nix
     ./mealie.nix
     ./actual.nix
     ./wealthfolio.nix

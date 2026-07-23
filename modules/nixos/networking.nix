@@ -191,6 +191,12 @@ in
           reverse_proxy localhost:${toString config.mylab.ports.homeassistant}
         }
 
+        @console host console.schenkenberger.dev
+        handle @console {
+          import authentik_forward_auth
+          reverse_proxy localhost:${toString config.mylab.ports.novnc}
+        }
+
         # App handles OIDC; no forward-auth
         @coder host coder.schenkenberger.dev
         handle @coder {
