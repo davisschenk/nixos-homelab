@@ -191,6 +191,14 @@ resource "coder_agent" "main" {
   # every repo's devcontainer.json — devcontainer.json stays project-specific.
   startup_script = <<-EOT
     set -u
+
+    # envbuilder builds (git clone, feature installs) as root, so everything
+    # under the /workspaces bind mount — a *host* path, persisted across
+    # rebuilds — comes out root-owned. containerUser then drops to a non-root
+    # session that can't write anywhere in there (breaks direnv, this
+    # script's own $TOOLS_DIR below, etc.) until it's chowned back.
+    sudo chown -R "$(id -u):$(id -g)" /workspaces
+
     TOOLS_DIR="${local.tools_dir}"
     mkdir -p "$TOOLS_DIR/bin"
 
