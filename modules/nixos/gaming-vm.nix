@@ -34,5 +34,9 @@
 
   environment.persistence."/persist" = {
     directories = [ "/var/lib/libvirt" ];
+    # libvirtd encrypts its secrets store with this systemd credential key;
+    # without persisting it, the key is unreachable after every root wipe
+    # and libvirtd fails to start (243/CREDENTIALS).
+    files = [ "/var/lib/systemd/credential.secret" ];
   };
 }
