@@ -184,6 +184,11 @@ resource "coder_agent" "main" {
     TOOLS_DIR="${local.tools_dir}"
     mkdir -p "$TOOLS_DIR/bin"
 
+    # group_add=["131"] (docker.sock's host GID) has no name in the
+    # container's /etc/group, so `groups`/`id` warn "cannot find name for
+    # group ID 131" — give it one.
+    getent group 131 >/dev/null 2>&1 || sudo groupadd -g 131 dockerhost
+
     if command -v apt-get >/dev/null 2>&1; then
       sudo apt-get update -qq
       for pkg in zsh jq tmux direnv fzf ripgrep bat nodejs npm; do
