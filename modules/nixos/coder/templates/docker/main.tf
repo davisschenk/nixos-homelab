@@ -164,6 +164,9 @@ resource "coder_agent" "main" {
     GIT_AUTHOR_EMAIL    = local.git_author_email
     GIT_COMMITTER_NAME  = local.git_author_name
     GIT_COMMITTER_EMAIL = local.git_author_email
+    # gh reads GH_TOKEN with no separate `gh auth login` step needed — same
+    # external-auth token envbuilder already used to clone the repo.
+    GH_TOKEN = data.coder_external_auth.github.access_token
     # $PATH is expanded by the shell Coder uses to launch sessions.
     PATH = "${local.tools_dir}/bin:$PATH"
   }
