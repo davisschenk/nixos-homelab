@@ -26,6 +26,9 @@ in
     };
     environmentFiles = [ config.sops.templates."github-runner-bog-bank-env".path ];
     extraOptions = [ "--memory=4g" "--cpus=2" ];
+    # docker-build.yml runs docker buildx here; give it the host's daemon
+    # (docker-outside-of-docker) instead of nesting dockerd in the runner.
+    volumes = [ "/var/run/docker.sock:/var/run/docker.sock" ];
   };
 
   # EPHEMERAL runners need Restart=always (exits after each job; on-failure would leave dead) plus rate limits.
