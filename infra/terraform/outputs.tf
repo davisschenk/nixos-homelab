@@ -15,5 +15,20 @@ output "bootstrap_complete" {
 
 output "monthly_base_price_usd" {
   description = "Live OVH catalog price for the selected one-month VPS-1 plan."
-  value       = local.monthly_price_usd
+  value       = local.monthly_base_price_usd
+}
+
+output "monthly_required_options_price_usd" {
+  description = "Live OVH catalog price for the required local storage and standard backup options."
+  value       = local.monthly_required_options_price_usd
+}
+
+output "monthly_total_price_usd" {
+  description = "Combined recurring monthly price for the VPS and all required options."
+  value       = local.monthly_total_price_usd
+}
+
+output "required_plan_options" {
+  description = "OVH plan option codes explicitly included in the VPS order."
+  value       = local.required_plan_option_codes
 }

@@ -24,7 +24,7 @@ locals {
 
   vps1_plan_code = try(reverse(local.vps1_plan_codes)[0], "")
   vps1_plan      = try(one([for plan in local.catalog.plans : plan if plan.planCode == local.vps1_plan_code]), null)
-  monthly_prices = local.vps1_plan == null ? [] : [
+  monthly_base_prices = local.vps1_plan == null ? [] : [
     for pricing in local.vps1_plan.pricings : pricing
     if pricing.mode == "default"
     && pricing.commitment == 0
@@ -32,7 +32,61 @@ locals {
     && pricing.intervalUnit == "month"
     && contains(pricing.capacities, "renew")
   ]
-  monthly_price_usd = try(one(local.monthly_prices).price / 100000000, 999)
+  monthly_base_price_usd = try(one(local.monthly_base_prices).price / 100000000, 999)
+
+  mandatory_addon_families = local.vps1_plan == null ? [] : [
+    for family in local.vps1_plan.addonFamilies : family
+    if family.mandatory
+  ]
+  storage_option_codes = distinct(flatten([
+    for family in local.mandatory_addon_families : family.addons
+    if family.name == "storage"
+  ]))
+  backup_option_codes = distinct(flatten([
+    for family in local.mandatory_addon_families : family.addons
+    if family.name == "automatedBackup"
+  ]))
+  standard_backup_option_codes = [
+    for addon in local.catalog.addons : addon.planCode
+    if contains(local.backup_option_codes, addon.planCode)
+    && strcontains(lower(addon.invoiceName), "standard")
+  ]
+  required_plan_option_codes = [
+    try(one(local.storage_option_codes), ""),
+    try(one(local.standard_backup_option_codes), ""),
+  ]
+  monthly_required_option_prices = [
+    for option_code in local.required_plan_option_codes : [
+      for pricing in try(one([
+        for addon in local.catalog.addons : addon
+        if addon.planCode == option_code
+      ]).pricings, []) : pricing
+      if pricing.mode == "default"
+      && pricing.commitment == 0
+      && pricing.interval == 1
+      && pricing.intervalUnit == "month"
+      && contains(pricing.capacities, "renew")
+    ]
+  ]
+  monthly_required_options_price_usd = sum([
+    for prices in local.monthly_required_option_prices :
+    try(one(prices).price / 100000000, 999)
+  ])
+  monthly_total_price_usd = local.monthly_base_price_usd + local.monthly_required_options_price_usd
+  vps1_catalog_valid = (
+    local.vps1_plan != null
+    && length(local.monthly_base_prices) == 1
+    && toset([for family in local.mandatory_addon_families : family.name]) == toset([
+      "os",
+      "storage",
+      "automatedBackup",
+    ])
+    && length(local.storage_option_codes) == 1
+    && length(local.standard_backup_option_codes) == 1
+    && alltrue([
+      for prices in local.monthly_required_option_prices : length(prices) == 1
+    ])
+  )
 
   ingress_shape_valid = alltrue([
     for entry in local.ingress :
@@ -61,13 +115,13 @@ locals {
 
 check "vps1_catalog" {
   assert {
-    condition     = local.vps1_plan != null && length(local.monthly_prices) == 1
-    error_message = "The OVH US catalog does not contain one monthly VPS-1 plan supporting Debian 13 in Hillsboro."
+    condition     = local.vps1_catalog_valid
+    error_message = "The OVH US catalog does not contain one supported monthly VPS-1 order with the expected mandatory options in Hillsboro."
   }
 
   assert {
-    condition     = local.monthly_price_usd < 10
-    error_message = "The selected OVH VPS recurring base price is not below USD 10."
+    condition     = local.monthly_total_price_usd < 10
+    error_message = "The selected OVH VPS and its required options do not have a combined recurring price below USD 10."
   }
 }
 
@@ -106,12 +160,21 @@ resource "ovh_vps" "estuary" {
     ]
   }]
 
+  plan_option = [
+    for option_code in local.required_plan_option_codes : {
+      duration     = "P1M"
+      plan_code    = option_code
+      pricing_mode = "default"
+      quantity     = 1
+    }
+  ]
+
   lifecycle {
     prevent_destroy = true
 
     precondition {
-      condition     = local.monthly_price_usd < 10
-      error_message = "Refusing to order an OVH VPS with a recurring base price of USD ${local.monthly_price_usd}."
+      condition     = local.vps1_catalog_valid && local.monthly_total_price_usd < 10
+      error_message = "Refusing to order an OVH VPS whose required options are invalid or whose combined recurring price is USD ${local.monthly_total_price_usd}."
     }
   }
 }
