@@ -51,7 +51,10 @@ in
       OAUTH_AUTHENTIK_CLIENT_SECRET=${config.sops.placeholder."pelican_oauth_client_secret"}
     '';
     owner = config.services.pelican.panel.user;
-    restartUnits = [ "pelican-panel-setup.service" "pelican-queue.service" ];
+    restartUnits = [
+      "pelican-panel-setup.service"
+      "pelican-queue.service"
+    ];
   };
 
   services = {
@@ -122,12 +125,13 @@ in
     }
   ];
 
-  networking.firewall.allowedTCPPorts = lib.mkIf config.services.pelican.wings.enable [ config.mylab.ports.wingsSftp ];
-
   # Requires= enforces startup order; After= alone doesn't guarantee it in systemctl calls
   systemd.services.pelican-panel-setup = {
     after = [ "redis-pelican-panel.service" ];
-    requires = [ "mysql.service" "redis-pelican-panel.service" ];
+    requires = [
+      "mysql.service"
+      "redis-pelican-panel.service"
+    ];
   };
 
   environment.persistence."/persist" = {

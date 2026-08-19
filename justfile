@@ -107,6 +107,9 @@ show-keys:
 
 # ── NixOS ─────────────────────────────────────────────────────────────────────
 
+validate-ingress:
+    python3 infra/scripts/validate_ingress.py
+
 # Build the installer ISO for mangrove
 build-iso:
     nix --extra-experimental-features 'nix-command flakes' build .#mangrove-iso
@@ -118,6 +121,9 @@ check:
 # Build the system (dry-run, no activation)
 build:
     {{nixos_rebuild}} build --flake .#{{host}}
+
+build-estuary:
+    {{nixos_rebuild}} build --flake .#estuary
 
 # Build and show what would change (dry activate)
 dry-run:
@@ -151,8 +157,18 @@ show:
 
 # Run statix + deadnix linters (check only, no changes)
 lint:
-    nix --extra-experimental-features 'nix-command flakes' run nixpkgs#statix -- check .
-    nix --extra-experimental-features 'nix-command flakes' run nixpkgs#deadnix -- .
+    #!/usr/bin/env bash
+    set -euo pipefail
+    files=()
+    if [[ -n "${GITHUB_BASE_REF:-}" ]]; then
+      mapfile -d '' files < <(git diff --name-only -z --diff-filter=ACMR "origin/$GITHUB_BASE_REF"...HEAD -- '*.nix')
+    else
+      mapfile -d '' files < <({ git diff --name-only -z --diff-filter=ACMR HEAD -- '*.nix'; git ls-files --others --exclude-standard -z -- '*.nix'; })
+    fi
+    for file in "${files[@]}"; do
+      nix --extra-experimental-features 'nix-command flakes' run nixpkgs#statix -- check "$file"
+      nix --extra-experimental-features 'nix-command flakes' run nixpkgs#deadnix -- "$file"
+    done
 
 # Run statix + deadnix and auto-fix issues
 lint-fix:
@@ -167,7 +183,19 @@ fmt:
 
 # Check formatting without writing changes
 fmt-check:
-    find . -name '*.nix' -not -path './.git/*' -print0 | xargs -0 nix --extra-experimental-features 'nix-command flakes' run nixpkgs#nixfmt -- --check
+    #!/usr/bin/env bash
+    set -euo pipefail
+    files=()
+    if [[ -n "${GITHUB_BASE_REF:-}" ]]; then
+      mapfile -d '' files < <(git diff --name-only -z --diff-filter=ACMR "origin/$GITHUB_BASE_REF"...HEAD -- '*.nix')
+    else
+      mapfile -d '' files < <({ git diff --name-only -z --diff-filter=ACMR HEAD -- '*.nix'; git ls-files --others --exclude-standard -z -- '*.nix'; })
+    fi
+    if [[ ${#files[@]} -eq 0 ]]; then
+      echo "No changed Nix files to check."
+      exit 0
+    fi
+    printf '%s\0' "${files[@]}" | xargs -0 nix --extra-experimental-features 'nix-command flakes' run nixpkgs#nixfmt -- --check
 
 # ── Git ───────────────────────────────────────────────────────────────────────
 

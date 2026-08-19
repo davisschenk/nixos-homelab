@@ -1,5 +1,7 @@
 result
 result-*
+__pycache__/
+*.pyc
 
 # terraform (modules/nixos/coder/templates/docker)
 .terraform/

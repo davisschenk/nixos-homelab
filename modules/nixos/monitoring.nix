@@ -1,4 +1,9 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 let
   p = config.mylab.ports;
 
@@ -41,6 +46,41 @@ in
       listenAddress = "127.0.0.1";
       port = p.prometheus;
       retentionTime = "30d";
+      ruleFiles = [
+        (pkgs.writeText "estuary-alerts.yml" ''
+          groups:
+            - name: estuary
+              rules:
+                - alert: EstuaryDown
+                  expr: up{job="estuary"} == 0
+                  for: 5m
+                  labels:
+                    severity: critical
+                  annotations:
+                    summary: estuary node exporter is unreachable
+                - alert: EstuaryIngressDown
+                  expr: probe_success{job="estuary-ingress"} == 0
+                  for: 5m
+                  labels:
+                    severity: critical
+                  annotations:
+                    summary: public estuary ingress is unreachable
+                - alert: EstuaryWireGuardHandshakeStale
+                  expr: time() - wireguard_latest_handshake_seconds{peer="estuary"} > 180
+                  for: 5m
+                  labels:
+                    severity: warning
+                  annotations:
+                    summary: mangrove has no recent estuary WireGuard handshake
+                - alert: CloudflareTunnelDown
+                  expr: node_systemd_unit_state{name="cloudflared.service",state="active"} == 0
+                  for: 5m
+                  labels:
+                    severity: critical
+                  annotations:
+                    summary: cloudflared is not active
+        '')
+      ];
 
       scrapeConfigs = [
         {
@@ -52,8 +92,39 @@ in
           static_configs = [ { targets = [ "localhost:${toString p.nodeExporter}" ]; } ];
         }
         {
+          job_name = "estuary";
+          static_configs = [ { targets = [ "10.88.0.1:${toString p.nodeExporter}" ]; } ];
+        }
+        {
+          job_name = "estuary-ingress";
+          metrics_path = "/probe";
+          params.module = [ "tcp_connect" ];
+          static_configs = [ { targets = [ "play.schenkenberger.dev:2022" ]; } ];
+          relabel_configs = [
+            {
+              source_labels = [ "__address__" ];
+              target_label = "__param_target";
+            }
+            {
+              source_labels = [ "__param_target" ];
+              target_label = "instance";
+            }
+            {
+              target_label = "__address__";
+              replacement = "127.0.0.1:9115";
+            }
+          ];
+        }
+        {
           job_name = "authentik";
-          static_configs = [ { targets = [ "localhost:${toString p.authentikMetrics}" "localhost:${toString p.authentikOutpostMetrics}" ]; } ];
+          static_configs = [
+            {
+              targets = [
+                "localhost:${toString p.authentikMetrics}"
+                "localhost:${toString p.authentikOutpostMetrics}"
+              ];
+            }
+          ];
         }
         {
           job_name = "sonarr";
@@ -78,6 +149,7 @@ in
         enable = true;
         listenAddress = "127.0.0.1";
         port = p.nodeExporter;
+        extraFlags = [ "--collector.textfile.directory=/var/lib/node-exporter/textfile" ];
         enabledCollectors = [
           "systemd"
           "processes"
@@ -90,7 +162,15 @@ in
           "hwmon"
           "time"
           "pressure"
+          "textfile"
         ];
+      };
+
+      exporters.blackbox = {
+        enable = true;
+        listenAddress = "127.0.0.1";
+        port = 9115;
+        configFile = ./monitoring-blackbox.yml;
       };
 
       exporters.exportarr-sonarr = {
@@ -180,6 +260,34 @@ in
     (mkArrKeyExtractor "sonarr" "/var/lib/nixarr/sonarr/config.xml")
     (mkArrKeyExtractor "radarr" "/var/lib/nixarr/radarr/config.xml")
     (mkArrKeyExtractor "prowlarr" "/var/lib/nixarr/prowlarr/config.xml")
+    {
+      wireguard-estuary-metrics = {
+        description = "Export estuary WireGuard handshake metrics";
+        after = [ "wireguard-wg-estuary.service" ];
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = pkgs.writeShellScript "wireguard-estuary-metrics" ''
+            set -euo pipefail
+            output=/var/lib/node-exporter/textfile/wireguard-estuary.prom
+            latest=$(${pkgs.wireguard-tools}/bin/wg show wg-estuary latest-handshakes | ${pkgs.gawk}/bin/awk '$1 == "fX/cDl6eNrzE93glQ8VOq+6YUfJxPgEArXSh3NY0Ox0=" { print $2 }')
+            ${pkgs.coreutils}/bin/printf 'wireguard_latest_handshake_seconds{peer="estuary"} %s\n' "''${latest:-0}" > "$output"
+          '';
+        };
+      };
+    }
+  ];
+
+  systemd.timers.wireguard-estuary-metrics = {
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnBootSec = "1m";
+      OnUnitActiveSec = "1m";
+      Unit = "wireguard-estuary-metrics.service";
+    };
+  };
+
+  systemd.tmpfiles.rules = [
+    "d /var/lib/node-exporter/textfile 0755 root root -"
   ];
 
   environment.persistence."/persist" = {
