@@ -215,12 +215,12 @@ in
             chain prerouting {
               type filter hook prerouting priority mangle; policy accept;
               iifname "${cfg.interfaceName}" ct mark set ${cfg.policyMark}
-              ct mark ${cfg.policyMark} meta mark set ct mark
+              ct direction reply ct mark ${cfg.policyMark} meta mark set ct mark
             }
 
             chain output {
               type route hook output priority mangle; policy accept;
-              ct mark ${cfg.policyMark} meta mark set ct mark
+              ct direction reply ct mark ${cfg.policyMark} meta mark set ct mark
             }
           '';
         };

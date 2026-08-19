@@ -17,9 +17,9 @@ let
             connection.sendall(peer[0].encode())
             connection.close()
 
-    def udp(port):
+    def udp(host, port):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind(("0.0.0.0", port))
+        sock.bind((host, port))
         while True:
             _, peer = sock.recvfrom(1024)
             sock.sendto(peer[0].encode(), peer)
@@ -29,7 +29,7 @@ let
     else:
         threading.Thread(target=tcp, args=(2022,), daemon=True).start()
         threading.Thread(target=tcp, args=(25565,), daemon=True).start()
-        threading.Thread(target=udp, args=(25565,), daemon=True).start()
+        threading.Thread(target=udp, args=("10.88.0.2", 25565), daemon=True).start()
         threading.Event().wait()
   '';
   probe = pkgs.writeText "estuary-ingress-probe.py" ''
