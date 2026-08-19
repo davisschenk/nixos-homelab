@@ -6,8 +6,11 @@
     ./disko.nix
   ];
 
-  networking.hostName = "estuary";
-  networking.useDHCP = true;
+  networking = {
+    hostName = "estuary";
+    useDHCP = true;
+    enableIPv6 = false;
+  };
 
   boot = {
     initrd.availableKernelModules = [

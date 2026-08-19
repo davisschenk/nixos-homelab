@@ -9,7 +9,7 @@
     extraGroups = [ "wheel" ];
     openssh.authorizedKeys.keys = [
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHcsz+eVVzP7F9kK1kvFoa05/9W4/xPgWCSD+cSJoh5a davis@tilt-app"
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICXMMUeIDraWyUbGvSN4J7wJz10HPDSUgDbQ6u4UAusd github-actions@nixos-homelab"
+      ''restrict,from="10.88.0.3" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICXMMUeIDraWyUbGvSN4J7wJz10HPDSUgDbQ6u4UAusd github-actions@nixos-homelab''
     ];
   };
 
