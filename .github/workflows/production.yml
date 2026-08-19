@@ -45,7 +45,7 @@ jobs:
       OVH_APPLICATION_SECRET: ${{ secrets.OVH_PLAN_APPLICATION_SECRET }}
       OVH_CONSUMER_KEY: ${{ secrets.OVH_PLAN_CONSUMER_KEY }}
       OVH_ENDPOINT: ovh-us
-      TFE_TOKEN: ${{ secrets.TFE_PLAN_TOKEN }}
+      TF_TOKEN_app_terraform_io: ${{ secrets.TFE_PLAN_TOKEN }}
       TF_VAR_bootstrap_complete: ${{ vars.TF_BOOTSTRAP_COMPLETE || 'false' }}
       TF_VAR_bootstrap_ssh_cidr: ${{ vars.TF_BOOTSTRAP_SSH_CIDR }}
     steps:
@@ -70,7 +70,7 @@ jobs:
       OVH_APPLICATION_SECRET: ${{ secrets.OVH_APPLICATION_SECRET }}
       OVH_CONSUMER_KEY: ${{ secrets.OVH_CONSUMER_KEY }}
       OVH_ENDPOINT: ovh-us
-      TFE_TOKEN: ${{ secrets.TFE_TOKEN }}
+      TF_TOKEN_app_terraform_io: ${{ secrets.TFE_TOKEN }}
       TF_VAR_bootstrap_complete: ${{ vars.TF_BOOTSTRAP_COMPLETE || 'false' }}
       TF_VAR_bootstrap_ssh_cidr: ${{ vars.TF_BOOTSTRAP_SSH_CIDR }}
     steps:
