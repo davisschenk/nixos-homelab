@@ -1,0 +1,23 @@
+[
+  {
+    "name": "pelican-sftp",
+    "protocol": "tcp",
+    "from": 2022,
+    "to": 2022,
+    "target": "mangrove"
+  },
+  {
+    "name": "games-tcp",
+    "protocol": "tcp",
+    "from": 25565,
+    "to": 25575,
+    "target": "mangrove"
+  },
+  {
+    "name": "games-udp",
+    "protocol": "udp",
+    "from": 25565,
+    "to": 25575,
+    "target": "mangrove"
+  }
+]

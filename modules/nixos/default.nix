@@ -2,6 +2,7 @@
   imports = [
     ./ports.nix
     ./base.nix
+    ./wireguard.nix
     ./networking.nix
     ./authentik
     ./media.nix

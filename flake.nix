@@ -39,6 +39,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    deploy-rs = {
+      url = "github:serokell/deploy-rs";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
   };
 
   outputs =
@@ -48,6 +53,7 @@
       disko,
       sops-nix,
       impermanence,
+      deploy-rs,
       nixarr,
       authentik-nix,
       nix-pelican,
@@ -76,8 +82,20 @@
             ];
           }
           copyparty.nixosModules.default
+          ./modules/common/base.nix
+          ./modules/common/wireguard.nix
           ./hosts/mangrove
           ./modules/nixos
+        ];
+      };
+
+      nixosConfigurations.estuary = nixpkgs.lib.nixosSystem {
+        inherit system;
+        specialArgs = { inherit inputs; };
+        modules = [
+          disko.nixosModules.disko
+          sops-nix.nixosModules.sops
+          ./hosts/estuary
         ];
       };
 
@@ -89,6 +107,12 @@
           {
             environment.systemPackages = [ pkgs.git ];
             boot.zfs.forceImportRoot = false;
+            boot.loader.grub.devices = [ "nodev" ];
+            fileSystems."/" = {
+              device = "tmpfs";
+              fsType = "tmpfs";
+            };
+            system.stateVersion = "25.05";
             image.modules."iso-installer" = {
               imports = [
                 "${nixpkgs}/nixos/modules/profiles/minimal.nix"
@@ -122,8 +146,41 @@
       };
 
       packages.${system} = {
-        mangrove-iso =
-          self.nixosConfigurations.mangrove-iso.config.system.build.images."iso-installer";
+        mangrove-iso = self.nixosConfigurations.mangrove-iso.config.system.build.images."iso-installer";
+      };
+
+      deploy.nodes = {
+        estuary = {
+          hostname = "10.88.0.1";
+          sshUser = "davis";
+          remoteBuild = true;
+          autoRollback = true;
+          magicRollback = true;
+          profiles.system = {
+            user = "root";
+            path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.estuary;
+          };
+        };
+        mangrove = {
+          hostname = "10.88.0.2";
+          sshUser = "davis";
+          remoteBuild = true;
+          autoRollback = true;
+          magicRollback = true;
+          profiles.system = {
+            user = "root";
+            path = deploy-rs.lib.${system}.activate.nixos self.nixosConfigurations.mangrove;
+          };
+        };
+      };
+
+      checks.${system} = deploy-rs.lib.${system}.deployChecks self.deploy // {
+        estuary-ingress = pkgs.testers.runNixOSTest (import ./tests/estuary-ingress.nix { inherit pkgs; });
+      };
+
+      apps.${system}.deploy = {
+        type = "app";
+        program = "${deploy-rs.packages.${system}.default}/bin/deploy";
       };
     };
 }

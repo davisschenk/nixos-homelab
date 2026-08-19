@@ -1,8 +1,14 @@
 keys:
   - &admin age19aesmaqmck97rh3hgswmwas4uflmd4kfx47v5gg57yj58jswccuq0x0vyg
   - &mangrove age13m2jqa3ddjkffjqu82gk40u42kqdypletd605ax7u3krpfx4sfhq9wq853
+  - &estuary age1r46ralksuzup6y30tvung35vks64pmfe72sujxjl4ptrrrn92seqzrfe3e
 
 creation_rules:
+  - path_regex: secrets/estuary\.yaml$
+    key_groups:
+      - age:
+          - *admin
+          - *estuary
   - path_regex: secrets/.*\.yaml$
     key_groups:
       - age:

@@ -1,49 +1,20 @@
 {
-  config,
   pkgs,
   lib,
   ...
 }:
 {
-  time.timeZone = "America/Denver";
-  i18n.defaultLocale = "en_US.UTF-8";
+  users.users.davis.extraGroups = [ "libvirtd" ];
 
-  users.mutableUsers = false;
-
-  users.users.davis = {
-    isNormalUser = true;
-    extraGroups = [
-      "wheel"
-      "libvirtd"
-    ];
-    openssh.authorizedKeys.keys = [
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHcsz+eVVzP7F9kK1kvFoa05/9W4/xPgWCSD+cSJoh5a davis@tilt-app"
-    ];
-  };
-
-  security.sudo.wheelNeedsPassword = false;
-
-  services.openssh = {
-    enable = true;
-    settings = {
-      PasswordAuthentication = false;
-      PermitRootLogin = "no";
-      AllowUsers = [ "davis" ];
-      MaxAuthTries = 3;
-    };
-    # Store host keys in /persist so they survive reboots
-    hostKeys = [
-      {
-        path = "/persist/etc/ssh/ssh_host_ed25519_key";
-        type = "ed25519";
-      }
-    ];
-  };
+  services.openssh.hostKeys = [
+    {
+      path = "/persist/etc/ssh/ssh_host_ed25519_key";
+      type = "ed25519";
+    }
+  ];
 
   networking.firewall = {
     enable = true;
-    allowedTCPPorts = [ 22 config.mylab.ports.minecraft ];
-    allowedUDPPorts = [ config.mylab.ports.minecraft ];
     # UDP 5353 is opened by services.avahi.openFirewall = true (the default)
   };
 
@@ -58,12 +29,7 @@
   };
 
   environment.systemPackages = with pkgs; [
-    git
-    vim
-    htop
     btrfs-progs
-    age
-    sops
     lshw
     pciutils
     usbutils
@@ -133,26 +99,5 @@
     "e /var/lib/private 0700 root root -"
   ];
   systemd.services."systemd-tmpfiles-resetup".serviceConfig.RemainAfterExit = lib.mkForce false;
-
-  zramSwap.enable = true;
-
-  nix = {
-    settings = {
-      experimental-features = [
-        "nix-command"
-        "flakes"
-      ];
-      trusted-users = [
-        "root"
-        "@wheel"
-      ];
-    };
-    gc = {
-      automatic = true;
-      dates = "weekly";
-      options = "--delete-older-than 30d";
-    };
-    optimise.automatic = true;
-  };
 
 }

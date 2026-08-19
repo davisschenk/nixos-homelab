@@ -1,0 +1,135 @@
+name: Deploy production
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - ".github/**"
+      - "flake.nix"
+      - "flake.lock"
+      - "hosts/**"
+      - "infra/**"
+      - "modules/**"
+      - "secrets/estuary.yaml"
+      - "secrets/wireguard.yaml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 infra/scripts/validate_ingress.py
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with:
+          terraform_version: "1.14.5"
+      - run: terraform -chdir=infra/terraform fmt -check -recursive
+      - run: terraform -chdir=infra/terraform init -backend=false
+      - run: terraform -chdir=infra/terraform validate
+
+  plan:
+    needs: validate
+    environment: planning
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PLAN_API_TOKEN }}
+      OVH_APPLICATION_KEY: ${{ secrets.OVH_PLAN_APPLICATION_KEY }}
+      OVH_APPLICATION_SECRET: ${{ secrets.OVH_PLAN_APPLICATION_SECRET }}
+      OVH_CONSUMER_KEY: ${{ secrets.OVH_PLAN_CONSUMER_KEY }}
+      OVH_ENDPOINT: ovh-us
+      TFE_TOKEN: ${{ secrets.TFE_PLAN_TOKEN }}
+      TF_VAR_bootstrap_complete: ${{ vars.TF_BOOTSTRAP_COMPLETE || 'false' }}
+      TF_VAR_bootstrap_ssh_cidr: ${{ vars.TF_BOOTSTRAP_SSH_CIDR }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with:
+          terraform_version: "1.14.5"
+      - name: Recompute production plan
+        run: |
+          terraform -chdir=infra/terraform init
+          terraform -chdir=infra/terraform plan -input=false -lock=false -no-color
+
+  apply-and-deploy:
+    needs: plan
+    environment: production
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      OVH_APPLICATION_KEY: ${{ secrets.OVH_APPLICATION_KEY }}
+      OVH_APPLICATION_SECRET: ${{ secrets.OVH_APPLICATION_SECRET }}
+      OVH_CONSUMER_KEY: ${{ secrets.OVH_CONSUMER_KEY }}
+      OVH_ENDPOINT: ovh-us
+      TFE_TOKEN: ${{ secrets.TFE_TOKEN }}
+      TF_VAR_bootstrap_complete: ${{ vars.TF_BOOTSTRAP_COMPLETE || 'false' }}
+      TF_VAR_bootstrap_ssh_cidr: ${{ vars.TF_BOOTSTRAP_SSH_CIDR }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with:
+          terraform_version: "1.14.5"
+      - name: Apply reviewed infrastructure
+        run: |
+          terraform -chdir=infra/terraform init
+          terraform -chdir=infra/terraform plan -input=false -out=production.tfplan
+          terraform -chdir=infra/terraform apply -input=false production.tfplan
+      - id: bootstrap
+        name: Read deployment gate
+        run: |
+          complete=$(terraform -chdir=infra/terraform output -raw bootstrap_complete)
+          endpoint=$(terraform -chdir=infra/terraform output -raw estuary_wireguard_endpoint)
+          ipv4=$(terraform -chdir=infra/terraform output -raw estuary_ipv4)
+          printf 'complete=%s\n' "$complete" >> "$GITHUB_OUTPUT"
+          printf 'endpoint=%s\n' "$endpoint" >> "$GITHUB_OUTPUT"
+          if [[ "$complete" != true ]]; then
+            {
+              printf '## Estuary bootstrap required\n\n'
+              printf -- '- IPv4: %s\n' "$ipv4"
+              printf -- '- WireGuard endpoint: %s\n\n' "$endpoint"
+              printf 'Complete docs/estuary-bootstrap.md before enabling GitOps deployment.\n'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - if: steps.bootstrap.outputs.complete == 'true'
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24
+      - if: steps.bootstrap.outputs.complete == 'true'
+        name: Join the management tunnel
+        env:
+          CI_WIREGUARD_PRIVATE_KEY: ${{ secrets.CI_WIREGUARD_PRIVATE_KEY }}
+          ESTUARY_ENDPOINT: ${{ steps.bootstrap.outputs.endpoint }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes wireguard-tools
+          .github/scripts/connect-wireguard.sh
+      - if: steps.bootstrap.outputs.complete == 'true'
+        name: Configure deployment SSH
+        env:
+          CI_SSH_DEPLOY_KEY: ${{ secrets.CI_SSH_DEPLOY_KEY }}
+        run: |
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$CI_SSH_DEPLOY_KEY" > "$HOME/.ssh/id_ed25519"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          ssh-keyscan -T 10 10.88.0.1 10.88.0.2 > "$HOME/.ssh/known_hosts"
+      - if: steps.bootstrap.outputs.complete == 'true'
+        name: Deploy estuary
+        run: nix run .#deploy -- .#estuary
+      - if: steps.bootstrap.outputs.complete == 'true'
+        name: Deploy mangrove
+        run: nix run .#deploy -- .#mangrove
+      - if: always() && steps.bootstrap.outputs.complete == 'true'
+        name: Remove ephemeral credentials
+        run: |
+          sudo wg-quick down wg-ci || true
+          sudo shred -u /etc/wireguard/wg-ci.conf || true
+          shred -u "$HOME/.ssh/id_ed25519" || true
