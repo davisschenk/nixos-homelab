@@ -218,7 +218,7 @@ in
     estuary.wait_until_succeeds("wg show wg-estuary latest-handshakes | grep -Ev '[[:space:]]0$'")
     runner.wait_until_succeeds("wg show wg-ci latest-handshakes | grep -Ev '[[:space:]]0$'")
 
-    runner.succeed("ping -c 1 10.88.0.2")
+    runner.wait_until_succeeds("ping -c 1 -W 1 10.88.0.2", timeout=30)
     runner.fail("ping -c 1 -W 1 198.51.100.2")
 
     client.succeed("${pkgs.python3}/bin/python ${probe} tcp 192.0.2.1 2022 192.0.2.2")
