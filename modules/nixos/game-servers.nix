@@ -561,15 +561,6 @@ in
       };
     };
 
-    system.activationScripts.pelican-reconcile = {
-      deps = [ "etc" ];
-      text = ''
-        if [[ -d /run/systemd/system ]]; then
-          ${pkgs.systemd}/bin/systemctl --no-block restart pelican-reconcile.service
-        fi
-      '';
-    };
-
     systemd.services.infrarust = mkIf cfg.infrarust.enable {
       description = "Infrarust Minecraft proxy";
       wantedBy = [ "multi-user.target" ];
