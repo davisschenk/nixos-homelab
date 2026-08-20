@@ -110,6 +110,9 @@ show-keys:
 validate-ingress:
     python3 infra/scripts/validate_ingress.py
 
+test-ingress:
+    nix --extra-experimental-features 'nix-command flakes' build -L .#checks.x86_64-linux.estuary-ingress
+
 # Build the installer ISO for mangrove
 build-iso:
     nix --extra-experimental-features 'nix-command flakes' build .#mangrove-iso

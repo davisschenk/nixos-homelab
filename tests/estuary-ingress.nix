@@ -2,6 +2,7 @@
 let
   hubPrivateKey = pkgs.writeText "estuary-test-private-key" "EM771qebn0IpEzCLal33m1FCtUct93j6YGxA6yH582Y=";
   spokePrivateKey = pkgs.writeText "mangrove-test-private-key" "OCrNF0F118EjJ+p0hySUVvp6fwnHqm4iKlh2jZ9molg=";
+  runnerPrivateKey = pkgs.writeText "runner-test-private-key" "CJ+fRjtZMegF6Sq3qTUyfSorxelhAuGRGA+rdaSsumc=";
   server = pkgs.writeText "estuary-ingress-server.py" ''
     import socket
     import sys
@@ -101,7 +102,39 @@ in
             publicKey = "AaFtDRPYtxhQCJ8EpbdN1vS7Va/W4P8/6ndrOut2YzA=";
             allowedIPs = [ "10.88.0.2/32" ];
           }
+          {
+            publicKey = "YVbKvMTRkurSRI/4KaOcDvw9iy7+QGuwJshTdfZo7Vo=";
+            allowedIPs = [ "10.88.0.3/32" ];
+          }
         ];
+      };
+      system.stateVersion = "25.05";
+    };
+
+    runner = {
+      virtualisation.vlans = [ 1 ];
+      networking = {
+        useDHCP = false;
+        interfaces.eth1.ipv4.addresses = [
+          {
+            address = "192.0.2.3";
+            prefixLength = 24;
+          }
+        ];
+        defaultGateway = "192.0.2.1";
+        firewall.enable = false;
+        wireguard.interfaces.wg-ci = {
+          ips = [ "10.88.0.3/32" ];
+          privateKeyFile = "${runnerPrivateKey}";
+          peers = [
+            {
+              publicKey = "tnXmN42VSar/VkBjLG/KzOU9OFKHd9uIstlltOfollQ=";
+              allowedIPs = [ "10.88.0.0/24" ];
+              endpoint = "192.0.2.1:51820";
+              persistentKeepalive = 25;
+            }
+          ];
+        };
       };
       system.stateVersion = "25.05";
     };
@@ -179,9 +212,14 @@ in
     start_all()
     estuary.wait_for_unit("wireguard-wg-estuary.service")
     mangrove.wait_for_unit("wireguard-wg-estuary.service")
+    runner.wait_for_unit("wireguard-wg-ci.service")
     mangrove.wait_for_unit("ingress-test.service")
     mangrove.wait_for_unit("container-ingress-test.service")
     estuary.wait_until_succeeds("wg show wg-estuary latest-handshakes | grep -Ev '[[:space:]]0$'")
+    runner.wait_until_succeeds("wg show wg-ci latest-handshakes | grep -Ev '[[:space:]]0$'")
+
+    runner.succeed("ping -c 1 10.88.0.2")
+    runner.fail("ping -c 1 -W 1 198.51.100.2")
 
     client.succeed("${pkgs.python3}/bin/python ${probe} tcp 192.0.2.1 2022 192.0.2.2")
     client.succeed("${pkgs.python3}/bin/python ${probe} tcp 192.0.2.1 25565 192.0.2.2")

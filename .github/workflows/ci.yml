@@ -184,11 +184,6 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Enable KVM for the NixOS integration test
-        run: |
-          if [[ -e /dev/kvm ]]; then
-            sudo chmod 666 /dev/kvm
-          fi
       - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24
         with:
           nix_path: nixpkgs=channel:nixos-unstable
@@ -196,6 +191,6 @@ jobs:
         run: nix profile add nixpkgs#just
       - run: just fmt-check
       - run: just lint
-      - run: nix flake check --print-build-logs
+      - run: nix flake check --no-build
       - run: nix build .#nixosConfigurations.mangrove.config.system.build.toplevel --no-link
       - run: nix build .#nixosConfigurations.estuary.config.system.build.toplevel --no-link

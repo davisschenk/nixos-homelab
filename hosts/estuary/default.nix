@@ -20,12 +20,8 @@
       "virtio_scsi"
     ];
     loader = {
-      efi.canTouchEfiVariables = false;
       grub = {
         enable = true;
-        device = "nodev";
-        efiInstallAsRemovable = true;
-        efiSupport = true;
       };
     };
   };
