@@ -1,6 +1,7 @@
-{ config, ... }:
+{ config, pkgs, ... }:
 let
   p = config.mylab.ports;
+  dbipCity = import ../common/dbip-city.nix { inherit pkgs; };
 in
 {
   # Suricata: alerting-only IDS to avoid dashboard noise and reduce Loki storage consumption
@@ -130,6 +131,11 @@ in
     enable = true;
     journaldAccess = true;
     settings = {
+      enrichment_tables.dbip_city = {
+        type = "mmdb";
+        path = "${dbipCity}";
+      };
+
       sources = {
         systemd_journal = {
           type = "journald";
@@ -181,8 +187,8 @@ in
           source = ''
             .unit = string(._SYSTEMD_UNIT) ?? string(.SYSLOG_IDENTIFIER) ?? "unknown"
             if .unit != "fail2ban.service" { abort }
-            msg = string(.MESSAGE) ?? ""
-            m, err = parse_regex(msg, r'^\S+\s+\[(?P<jail>[^\]]+)\]\s+Ban\s+(?P<ip>[\d\.a-fA-F:]+)')
+            msg = string(.message) ?? ""
+            m, err = parse_regex(msg, r'\[(?P<jail>[^\]]+)\]\s+Ban\s+(?P<ip>[\d\.a-fA-F:]+)')
             if err != null {
               m, err = parse_regex(msg, r'Ban\s+(?P<ip>[\d\.a-fA-F:]+)')
               if err != null { abort }
@@ -192,6 +198,12 @@ in
             }
             .banned_ip = string(m.ip) ?? ""
             if .banned_ip == "" { abort }
+            location = get_enrichment_table_record!("dbip_city", { "ip": .banned_ip })
+            .latitude = float!(location.location.latitude)
+            .longitude = float!(location.location.longitude)
+            .city = string(location.city.names.en) ?? "Unknown"
+            .country = string(location.country.names.en) ?? "Unknown"
+            .country_code = string(location.country.iso_code) ?? "Unknown"
           '';
         };
       };
@@ -222,7 +234,6 @@ in
             job = "fail2ban-bans";
             host = "mangrove";
             jail = "{{ jail }}";
-            banned_ip = "{{ banned_ip }}";
           };
         };
 
@@ -239,6 +250,39 @@ in
           };
         };
       };
+
+      tests = [
+        {
+          name = "geolocate-fail2ban-ban";
+          inputs = [
+            {
+              insert_at = "parse_f2b_ban";
+              type = "log";
+              log_fields = {
+                _SYSTEMD_UNIT = "fail2ban.service";
+                message = "2026-08-20 12:00:00,000 fail2ban.actions [123]: NOTICE [sshd] Ban 8.8.8.8";
+              };
+            }
+          ];
+          outputs = [
+            {
+              extract_from = "parse_f2b_ban";
+              conditions = [
+                {
+                  type = "vrl";
+                  source = ''
+                    assert_eq!(.banned_ip, "8.8.8.8")
+                    assert_eq!(.jail, "sshd")
+                    assert!(is_float(.latitude))
+                    assert!(is_float(.longitude))
+                    assert!(is_string(.country_code))
+                  '';
+                }
+              ];
+            }
+          ];
+        }
+      ];
     };
   };
 

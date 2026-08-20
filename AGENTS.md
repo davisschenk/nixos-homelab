@@ -2,6 +2,33 @@
 
 Conventions for anyone (human or agent) editing this NixOS flake.
 
+## Development workflow
+
+1. Start from current `master` on a focused feature branch.
+2. Keep unrelated working-tree changes untouched and never commit plaintext secrets.
+3. Run `just fmt-check` and `just lint` for every Nix change.
+4. Evaluate or build the affected host locally. Run `just test-ingress` for WireGuard,
+   nftables, DNAT, source-IP preservation, or policy-routing changes.
+5. Open a PR and let the path-filtered checks finish. Terraform PRs must complete
+   their protected plan/apply job before merge.
+6. Deploy by merging to protected `master`. The production workflow applies
+   Terraform, joins WireGuard from an ephemeral runner, deploys Estuary and then
+   Mangrove, and removes its credentials.
+
+CI deliberately limits ordinary Nix PRs to formatting and linting. Full builds and
+VM tests are local, risk-based checks; do not remove them merely because CI skips
+them. Use manual `just deploy` only for bootstrap or recovery.
+
+## Shared contracts
+
+- `infra/ingress.json` is the only source of truth for public forwarded ports.
+  Terraform and Nix consume it; never duplicate ingress ranges elsewhere.
+- `modules/common/wireguard.nix` owns the hub/spoke topology and forwarding rules.
+- Keep public IPs and other unbounded values in log bodies, not Loki labels.
+- Reuse `modules/common/dbip-city.nix` for GeoIP enrichment and include visible
+  DB-IP attribution on dashboards that display its data.
+- Estuary is stateless and must not receive Mangrove service secrets.
+
 ## Comments — last resort, not documentation
 
 Default to **no comments**. Well-named options and small module files should
@@ -52,8 +79,11 @@ per-module.
 
 - `just fmt` / `just fmt-check` — nixfmt
 - `just lint` / `just lint-fix` — statix + deadnix
-- `just check` — `nix flake check`
-- `just build` / `just deploy` / `just dry-run`
+- `just validate-ingress` — validate the shared ingress contract
+- `just build` / `just build-estuary` — build the affected host
+- `just test-ingress` — run the three-node forwarding VM test
+- `just check` — broad flake and deploy-rs evaluation
+- `just deploy` / `just dry-run` — manual recovery paths
 
 For fast config validation without a full build:
 ```
