@@ -191,6 +191,6 @@ jobs:
         run: nix profile add nixpkgs#just
       - run: just fmt-check
       - run: just lint
-      - run: nix flake check --no-build
       - run: nix build .#nixosConfigurations.mangrove.config.system.build.toplevel --no-link
       - run: nix build .#nixosConfigurations.estuary.config.system.build.toplevel --no-link
+      - run: nix flake check --no-build
