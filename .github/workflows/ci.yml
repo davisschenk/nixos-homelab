@@ -1,6 +1,10 @@
 name: Validate infrastructure
 
-on: pull_request
+on:
+  pull_request:
+  push:
+    branches:
+      - master
 
 permissions:
   contents: read
@@ -21,8 +25,18 @@ jobs:
       - id: filter
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          EVENT_NAME: ${{ github.event_name }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
+          if [[ "$EVENT_NAME" == push ]]; then
+            {
+              printf 'ingress=false\n'
+              printf 'nix=true\n'
+              printf 'terraform=false\n'
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           ingress=false
           nix=false
           terraform=false
@@ -187,10 +201,20 @@ jobs:
       - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24
         with:
           nix_path: nixpkgs=channel:nixos-unstable
+      - uses: DeterminateSystems/magic-nix-cache-action@908b263ff629f4cc17666315b7fd3ec127c6244d
+        with:
+          diagnostic-endpoint: ""
+          use-gha-cache: true
+          use-flakehub: false
       - name: Install just
         run: nix profile add nixpkgs#just
       - run: just fmt-check
       - run: just lint
       - run: nix build .#nixosConfigurations.mangrove.config.system.build.toplevel --no-link
       - run: nix build .#nixosConfigurations.estuary.config.system.build.toplevel --no-link
-      - run: nix flake check --no-build
+      - name: Enable KVM for the NixOS integration test
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - run: nix flake check --print-build-logs
