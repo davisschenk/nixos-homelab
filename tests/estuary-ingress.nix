@@ -33,6 +33,18 @@ let
         threading.Thread(target=udp, args=("10.88.0.2", 25565), daemon=True).start()
         threading.Event().wait()
   '';
+  managementServer = pkgs.writeText "estuary-management-server.py" ''
+    import socket
+
+    sock = socket.socket()
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind(("0.0.0.0", 22))
+    sock.listen()
+    while True:
+        connection, peer = sock.accept()
+        connection.sendall(peer[0].encode())
+        connection.close()
+  '';
   probe = pkgs.writeText "estuary-ingress-probe.py" ''
     import socket
     import sys
@@ -107,6 +119,10 @@ in
             allowedIPs = [ "10.88.0.3/32" ];
           }
         ];
+      };
+      systemd.services.management-test = {
+        wantedBy = [ "multi-user.target" ];
+        serviceConfig.ExecStart = "${pkgs.python3}/bin/python ${managementServer}";
       };
       system.stateVersion = "25.05";
     };
@@ -213,6 +229,7 @@ in
     estuary.wait_for_unit("wireguard-wg-estuary.service")
     mangrove.wait_for_unit("wireguard-wg-estuary.service")
     runner.wait_for_unit("wireguard-wg-ci.service")
+    estuary.wait_for_unit("management-test.service")
     mangrove.wait_for_unit("ingress-test.service")
     mangrove.wait_for_unit("container-ingress-test.service")
     estuary.wait_until_succeeds("wg show wg-estuary latest-handshakes | grep -Ev '[[:space:]]0$'")
@@ -220,6 +237,9 @@ in
 
     runner.wait_until_succeeds("ping -c 1 -W 1 10.88.0.2", timeout=30)
     runner.fail("ping -c 1 -W 1 198.51.100.2")
+    runner.succeed("${pkgs.python3}/bin/python ${probe} tcp 10.88.0.1 22 10.88.0.3")
+    client.fail("${pkgs.python3}/bin/python ${probe} tcp 192.0.2.1 22 192.0.2.2")
+    estuary.succeed("nft list counter inet estuary-observability public_ssh_probes | grep -E 'packets [1-9]'")
 
     client.succeed("${pkgs.python3}/bin/python ${probe} tcp 192.0.2.1 2022 192.0.2.2")
     client.succeed("${pkgs.python3}/bin/python ${probe} tcp 192.0.2.1 25565 192.0.2.2")

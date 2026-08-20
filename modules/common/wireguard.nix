@@ -176,7 +176,6 @@ in
 
         networking.firewall = {
           filterForward = true;
-          allowedTCPPorts = [ 22 ];
           allowedUDPPorts = [ cfg.listenPort ];
           allowedTCPPortRanges = portRanges tcpIngress;
           allowedUDPPortRanges = portRanges udpIngress;
@@ -195,6 +194,20 @@ in
             chain prerouting {
               type nat hook prerouting priority dstnat; policy accept;
               ${dnatRules}
+            }
+          '';
+        };
+
+        networking.nftables.tables.estuary-observability = {
+          family = "inet";
+          content = ''
+            counter public_ssh_probes {}
+
+            chain input {
+              type filter hook input priority -10; policy accept;
+              iifname "${cfg.publicInterface}" tcp dport 22 ct state new counter name public_ssh_probes
+              iifname "${cfg.publicInterface}" tcp dport 22 ct state new limit rate 10/minute log prefix "estuary-public-ssh-probe "
+              iifname "${cfg.publicInterface}" tcp dport 22 drop
             }
           '';
         };
