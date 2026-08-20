@@ -20,7 +20,60 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      ingress: ${{ steps.filter.outputs.ingress }}
+      nix: ${{ steps.filter.outputs.nix }}
+      terraform: ${{ steps.filter.outputs.terraform }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: filter
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          ingress=false
+          nix=false
+          terraform=false
+
+          while IFS= read -r -d '' path; do
+            case "$path" in
+              infra/ingress.json)
+                ingress=true
+                nix=true
+                terraform=true
+                ;;
+              infra/scripts/validate_ingress.py)
+                ingress=true
+                ;;
+            esac
+
+            case "$path" in
+              infra/terraform/*)
+                terraform=true
+                ;;
+            esac
+
+            case "$path" in
+              .sops.yaml|flake.nix|flake.lock|hosts/*|modules/*|tests/*|justfile|statix.toml|secrets/estuary.yaml|secrets/wireguard.yaml)
+                nix=true
+                ;;
+            esac
+          done < <(git diff --name-only --diff-filter=ACMRT -z "$BASE_SHA" "$HEAD_SHA")
+
+          {
+            printf 'ingress=%s\n' "$ingress"
+            printf 'nix=%s\n' "$nix"
+            printf 'terraform=%s\n' "$terraform"
+          } >> "$GITHUB_OUTPUT"
+
   ingress:
+    needs: changes
+    if: needs.changes.outputs.ingress == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -29,6 +82,8 @@ jobs:
       - run: python3 infra/scripts/validate_ingress.py
 
   terraform:
+    needs: changes
+    if: needs.changes.outputs.terraform == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -45,7 +100,8 @@ jobs:
       - run: terraform validate
 
   terraform-plan:
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    needs: changes
+    if: needs.changes.outputs.terraform == 'true' && github.event.pull_request.head.repo.full_name == github.repository
     environment: planning
     runs-on: ubuntu-latest
     defaults:
@@ -71,6 +127,8 @@ jobs:
       - run: terraform plan -input=false -lock=false -no-color
 
   nix:
+    needs: changes
+    if: needs.changes.outputs.nix == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
