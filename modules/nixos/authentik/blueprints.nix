@@ -1,7 +1,11 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 let
-  defaultBlueprintsDir =
-    "${config.services.authentik.authentikComponents.staticWorkdirDeps}/blueprints";
+  defaultBlueprintsDir = "${config.services.authentik.authentikComponents.staticWorkdirDeps}/blueprints";
 
   blueprintNames = [
     "groups"
@@ -21,6 +25,7 @@ let
     "frigate"
     "home-assistant"
     "pelican"
+    "infrarust"
     "wealthfolio"
     "tilt"
     "coder"
@@ -32,7 +37,9 @@ let
     cp -rL ${defaultBlueprintsDir}/. $out/
     chmod u+w $out
     mkdir -p $out/custom
-    ${lib.concatMapStrings (name: "cp ${./blueprints/${name}.yaml} $out/custom/${name}.yaml\n") blueprintNames}
+    ${lib.concatMapStrings (
+      name: "cp ${./blueprints/${name}.yaml} $out/custom/${name}.yaml\n"
+    ) blueprintNames}
   '';
 in
 {

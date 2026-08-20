@@ -147,6 +147,8 @@
 
       packages.${system} = {
         mangrove-iso = self.nixosConfigurations.mangrove-iso.config.system.build.images."iso-installer";
+        infrarust = pkgs.callPackage ./pkgs/infrarust { };
+        pelican-reconciler = pkgs.callPackage ./pkgs/pelican-reconciler { };
       };
 
       deploy.nodes = {
@@ -176,6 +178,17 @@
 
       checks.${system} = deploy-rs.lib.${system}.deployChecks self.deploy // {
         estuary-ingress = pkgs.testers.runNixOSTest (import ./tests/estuary-ingress.nix { inherit pkgs; });
+        pelican-reconciler =
+          pkgs.runCommand "pelican-reconciler-tests"
+            {
+              nativeBuildInputs = [ pkgs.python3 ];
+            }
+            ''
+              export PYTHONDONTWRITEBYTECODE=1
+              RECONCILER_PATH=${./pkgs/pelican-reconciler/reconciler.py} \
+                python3 ${./pkgs/pelican-reconciler/test_reconciler.py}
+              touch $out
+            '';
       };
 
       apps.${system}.deploy = {

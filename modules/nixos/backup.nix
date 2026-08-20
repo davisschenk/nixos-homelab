@@ -1,4 +1,9 @@
-{ config, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   sopsFile = ../../secrets/restic.yaml;
   commonSettings = {
@@ -85,6 +90,13 @@ in
     "restic-backups-postgresql.service"
     "restic-backups-mysql.service"
   ];
+  systemd.services."restic-backups-persist".serviceConfig.ExecStartPost =
+    lib.mkIf config.mylab.gameServers.enable (
+      pkgs.writeShellScript "mark-pelican-restic-success" ''
+        ${pkgs.coreutils}/bin/install -d -m 2750 -o root -g game-servers /var/lib/pelican-reconciler
+        ${pkgs.coreutils}/bin/touch ${config.mylab.gameServers.backupMarker}
+      ''
+    );
 
   # Ensure dirs exist before impermanence bind-mounts; needed for first-boot dump jobs.
   systemd.tmpfiles.rules = [

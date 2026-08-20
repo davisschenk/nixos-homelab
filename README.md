@@ -96,7 +96,9 @@ tests/
   estuary-ingress.nix     Three-node forwarding and policy-routing VM test
 ```
 
-Terraform state is remotely locked and versioned in the HCP Terraform organization `davisschenk-homelab`, workspace `nixos-homelab-production`. Terraform manages the Estuary VPS, OVH edge firewall, and DNS-only `play.schenkenberger.dev` record. The existing Cloudflare Tunnel and wildcard DNS remain outside Terraform.
+Terraform state is remotely locked and versioned in the HCP Terraform organization `davisschenk-homelab`, workspace `nixos-homelab-production`. Terraform manages the Estuary VPS, OVH edge firewall, and DNS-only `play.schenkenberger.dev` and `*.mc.schenkenberger.dev` records. The existing Cloudflare Tunnel and root wildcard DNS remain outside Terraform.
+
+Selected Pelican servers and native Infrarust routes can be managed through the [declarative game-server catalog](docs/game-servers.md).
 
 ## Development workflow
 

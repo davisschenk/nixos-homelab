@@ -362,3 +362,14 @@ resource "cloudflare_dns_record" "play" {
 
   comment = "Raw game and Pelican ingress through estuary"
 }
+
+resource "cloudflare_dns_record" "minecraft_wildcard" {
+  zone_id = data.cloudflare_zone.primary.id
+  name    = "*.mc.${var.cloudflare_zone}"
+  content = local.estuary_ipv4
+  type    = "A"
+  ttl     = 1
+  proxied = false
+
+  comment = "Raw Minecraft hostname routing through estuary and Infrarust"
+}

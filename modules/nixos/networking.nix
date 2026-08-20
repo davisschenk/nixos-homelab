@@ -1,5 +1,6 @@
 {
   config,
+  lib,
   pkgs,
   ...
 }:
@@ -46,7 +47,10 @@ in
   };
 
   # Map caddy to localhost (was Docker hostname in Proxmox setup); hairpin wings.schenkenberger.dev too
-  networking.hosts."127.0.0.1" = [ "caddy" "wings.schenkenberger.dev" ];
+  networking.hosts."127.0.0.1" = [
+    "caddy"
+    "wings.schenkenberger.dev"
+  ];
 
   # caddy-dns/cloudflare plugin handles DNS-01 challenges without external security.acme
   services.caddy = {
@@ -178,6 +182,14 @@ in
         handle @wings {
           reverse_proxy localhost:${toString config.mylab.ports.wings}
         }
+
+        ${lib.optionalString config.mylab.gameServers.infrarust.enable ''
+          @infrarust host infrarust.schenkenberger.dev
+          handle @infrarust {
+            import authentik_forward_auth
+            reverse_proxy localhost:${toString config.mylab.ports.infrarust}
+          }
+        ''}
 
         @frigate host frigate.schenkenberger.dev
         handle @frigate {
