@@ -12,6 +12,7 @@
     ./docker.nix
     ./romm.nix
     ./pelican.nix
+    ./game-servers.nix
     ./gaming-vm.nix
     ./vm-console.nix
     ./mealie.nix

@@ -10,6 +10,8 @@ on:
       - "hosts/**"
       - "infra/**"
       - "modules/**"
+      - "pkgs/**"
+      - "secrets/pelican.yaml"
       - "secrets/estuary.yaml"
       - "secrets/wireguard.yaml"
 
@@ -28,6 +30,7 @@ jobs:
         with:
           persist-credentials: false
       - run: python3 infra/scripts/validate_ingress.py
+      - run: python3 -m unittest -v pkgs/pelican-reconciler/test_reconciler.py
       - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
         with:
           terraform_version: "1.14.5"

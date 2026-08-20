@@ -156,6 +156,11 @@
       default = 25565;
       description = "Minecraft server listen port.";
     };
+    infrarust = lib.mkOption {
+      type = lib.types.port;
+      default = 8084;
+      description = "Infrarust administrative API and web UI listen port.";
+    };
     novnc = lib.mkOption {
       type = lib.types.port;
       default = 6080;

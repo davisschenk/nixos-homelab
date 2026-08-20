@@ -113,6 +113,9 @@ validate-ingress:
 test-ingress:
     nix --extra-experimental-features 'nix-command flakes' build -L .#checks.x86_64-linux.estuary-ingress
 
+test-reconciler:
+    python3 -m unittest -v pkgs/pelican-reconciler/test_reconciler.py
+
 # Build the installer ISO for mangrove
 build-iso:
     nix --extra-experimental-features 'nix-command flakes' build .#mangrove-iso

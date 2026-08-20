@@ -46,7 +46,7 @@ jobs:
             esac
 
             case "$path" in
-              .sops.yaml|flake.nix|flake.lock|hosts/*|modules/*|tests/*|justfile|statix.toml|secrets/estuary.yaml|secrets/wireguard.yaml)
+              .sops.yaml|flake.nix|flake.lock|hosts/*|modules/*|pkgs/*|tests/*|justfile|statix.toml|secrets/estuary.yaml|secrets/wireguard.yaml|secrets/pelican.yaml)
                 nix=true
                 ;;
             esac
@@ -191,3 +191,4 @@ jobs:
         run: nix profile add nixpkgs#just
       - run: just fmt-check
       - run: just lint
+      - run: just test-reconciler
