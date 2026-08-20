@@ -138,7 +138,7 @@ in
         type = "remap";
         inputs = [ "systemd_journal" ];
         source = ''
-          message = string(.MESSAGE) ?? ""
+          message = string(.message) ?? ""
           if !starts_with(message, "estuary-public-ssh-probe ") { abort }
           fields = parse_regex!(message, r'SRC=(?P<source_ip>[0-9a-fA-F:.]+)')
           .source_ip = fields.source_ip
@@ -172,7 +172,7 @@ in
             {
               insert_at = "estuary_ssh_probes";
               type = "log";
-              log_fields.MESSAGE = "estuary-public-ssh-probe IN=ens3 SRC=8.8.8.8 DST=15.204.123.187 PROTO=TCP DPT=22";
+              log_fields.message = "estuary-public-ssh-probe IN=ens3 SRC=8.8.8.8 DST=15.204.123.187 PROTO=TCP DPT=22";
             }
           ];
           outputs = [
