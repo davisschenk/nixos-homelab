@@ -50,6 +50,16 @@ def request(method: str, path: str, payload: object | None = None) -> object:
     return json.loads(response_body) if response_body else None
 
 
+def wait_until_absent(path: str, sequences: set[int], timeout: int = 60) -> None:
+    deadline = time.monotonic() + timeout
+    while sequences & {int(sequence) for sequence in request("GET", path)}:
+        if time.monotonic() >= deadline:
+            raise RuntimeError(
+                f"OVH firewall rules were not deleted within {timeout} seconds"
+            )
+        time.sleep(1)
+
+
 def main() -> None:
     firewall_cidr = urllib.parse.quote(os.environ["OVH_FIREWALL_CIDR"], safe="")
     firewall_ip = urllib.parse.quote(os.environ["OVH_FIREWALL_IP"], safe="")
@@ -57,9 +67,12 @@ def main() -> None:
     rules_path = f"/ip/{firewall_cidr}/firewall/{firewall_ip}/rule"
     deny_rule = next(rule for rule in rules if rule["action"] == "deny")
 
+    deleted_sequences = set()
     for sequence in request("GET", rules_path):
         if sequence != deny_rule["sequence"]:
             request("DELETE", f"{rules_path}/{sequence}")
+            deleted_sequences.add(sequence)
+    wait_until_absent(rules_path, deleted_sequences)
 
     for rule in sorted(
         (rule for rule in rules if rule["action"] != "deny"),
@@ -70,6 +83,7 @@ def main() -> None:
     existing = request("GET", rules_path)
     if deny_rule["sequence"] in existing:
         request("DELETE", f"{rules_path}/{deny_rule['sequence']}")
+        wait_until_absent(rules_path, {deny_rule["sequence"]})
     request("POST", rules_path, deny_rule)
 
 
