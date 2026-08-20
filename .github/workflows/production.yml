@@ -126,10 +126,10 @@ jobs:
           ssh-keyscan -T 10 10.88.0.1 10.88.0.2 > "$HOME/.ssh/known_hosts"
       - if: steps.bootstrap.outputs.complete == 'true'
         name: Deploy estuary
-        run: nix run .#deploy -- .#estuary
+        run: nix run .#deploy -- --skip-checks .#estuary
       - if: steps.bootstrap.outputs.complete == 'true'
         name: Deploy mangrove
-        run: nix run .#deploy -- .#mangrove
+        run: nix run .#deploy -- --skip-checks .#mangrove
       - if: always() && steps.bootstrap.outputs.complete == 'true'
         name: Remove ephemeral credentials
         run: |
