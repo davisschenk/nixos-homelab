@@ -111,7 +111,9 @@ jobs:
         with:
           terraform_version: "1.14.5"
       - run: terraform init
-      - run: terraform plan -input=false -lock=false -no-color
+      - run: terraform plan -input=false -lock=false -out=review.tfplan
+      - run: terraform show -json review.tfplan | python3 scripts/assert_estuary_not_created.py
+      - run: terraform show -no-color review.tfplan
 
   terraform-apply-production:
     needs: [changes, terraform, terraform-plan]
@@ -153,6 +155,7 @@ jobs:
         run: |
           terraform init
           terraform plan -input=false -out=production.tfplan
+          terraform show -json production.tfplan | python3 scripts/assert_estuary_not_created.py
           terraform apply -input=false production.tfplan
 
   terraform-apply:

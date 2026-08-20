@@ -58,7 +58,9 @@ jobs:
       - name: Recompute production plan
         run: |
           terraform -chdir=infra/terraform init
-          terraform -chdir=infra/terraform plan -input=false -lock=false -no-color
+          terraform -chdir=infra/terraform plan -input=false -lock=false -out=review.tfplan
+          terraform -chdir=infra/terraform show -json review.tfplan | python3 infra/terraform/scripts/assert_estuary_not_created.py
+          terraform -chdir=infra/terraform show -no-color review.tfplan
 
   apply-and-deploy:
     needs: plan
@@ -84,6 +86,7 @@ jobs:
         run: |
           terraform -chdir=infra/terraform init
           terraform -chdir=infra/terraform plan -input=false -out=production.tfplan
+          terraform -chdir=infra/terraform show -json production.tfplan | python3 infra/terraform/scripts/assert_estuary_not_created.py
           terraform -chdir=infra/terraform apply -input=false production.tfplan
       - id: bootstrap
         name: Read deployment gate

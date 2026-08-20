@@ -195,10 +195,12 @@ locals {
   ovh_edge_rules = concat(
     [
       {
-        sequence  = 0
-        action    = "permit"
-        protocol  = "tcp"
-        tcpOption = "established"
+        sequence = 0
+        action   = "permit"
+        protocol = "tcp"
+        tcpOption = {
+          option = "established"
+        }
       },
       {
         sequence = 1
@@ -206,35 +208,61 @@ locals {
         protocol = "icmp"
       }
     ],
-    [
-      for index, entry in local.ingress : merge(
-        {
-          sequence        = index + 2
-          action          = "permit"
-          protocol        = entry.protocol
-          destinationPort = entry.from == entry.to ? tostring(entry.from) : "${entry.from}-${entry.to}"
-        },
-        entry.protocol == "tcp" ? { tcpOption = "syn" } : {}
-      )
-    ],
+    concat(
+      [
+        for index, entry in local.ingress : merge(
+          {
+            sequence        = index + 2
+            action          = "permit"
+            protocol        = entry.protocol
+            destinationPort = entry.from
+          },
+          entry.protocol == "tcp" ? {
+            tcpOption = {
+              option = "syn"
+            }
+          } : {}
+        )
+        if entry.from == entry.to
+      ],
+      [
+        for index, entry in local.ingress : merge(
+          {
+            sequence = index + 2
+            action   = "permit"
+            protocol = entry.protocol
+            destinationPortRange = {
+              from = entry.from
+              to   = entry.to
+            }
+          },
+          entry.protocol == "tcp" ? {
+            tcpOption = {
+              option = "syn"
+            }
+          } : {}
+        )
+        if entry.from != entry.to
+      ]
+    ),
     [
       {
         sequence        = local.ingress_rule_end
         action          = "permit"
         protocol        = "udp"
-        destinationPort = tostring(var.wireguard_port)
+        destinationPort = var.wireguard_port
       },
       {
         sequence   = local.ingress_rule_end + 1
         action     = "permit"
         protocol   = "udp"
-        sourcePort = "53"
+        sourcePort = 53
       },
       {
         sequence   = local.ingress_rule_end + 2
         action     = "permit"
         protocol   = "udp"
-        sourcePort = "123"
+        sourcePort = 123
       }
     ],
     var.bootstrap_complete ? [] : [
@@ -243,8 +271,10 @@ locals {
         action          = "permit"
         protocol        = "tcp"
         source          = var.bootstrap_ssh_cidr
-        destinationPort = "22"
-        tcpOption       = "syn"
+        destinationPort = 22
+        tcpOption = {
+          option = "syn"
+        }
       }
     ],
     [
@@ -257,7 +287,11 @@ locals {
   )
 
   edge_destination_ports = compact([
-    for rule in local.ovh_edge_rules : try("${rule.protocol}:${rule.destinationPort}", "")
+    for rule in local.ovh_edge_rules : try(
+      "${rule.protocol}:${rule.destinationPort}",
+      "${rule.protocol}:${rule.destinationPortRange.from}-${rule.destinationPortRange.to}",
+      ""
+    )
   ])
   expected_destination_ports = concat(
     [for entry in local.ingress : "${entry.protocol}:${entry.from == entry.to ? tostring(entry.from) : "${entry.from}-${entry.to}"}"],
@@ -266,7 +300,7 @@ locals {
   )
   edge_ssh_rules = [
     for rule in local.ovh_edge_rules : rule
-    if try(rule.protocol, "") == "tcp" && try(rule.destinationPort, "") == "22"
+    if try(rule.protocol, "") == "tcp" && try(rule.destinationPort, 0) == 22
   ]
 }
 
