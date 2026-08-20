@@ -180,6 +180,9 @@ in
           allowedUDPPorts = [ cfg.listenPort ];
           allowedTCPPortRanges = portRanges tcpIngress;
           allowedUDPPortRanges = portRanges udpIngress;
+          extraForwardRules = ''
+            iifname "${cfg.interfaceName}" oifname "${cfg.interfaceName}" ip saddr 10.88.0.3 ip daddr ${cfg.forwardTarget} accept
+          '';
           interfaces.${cfg.interfaceName}.allowedTCPPorts = [
             22
             9100

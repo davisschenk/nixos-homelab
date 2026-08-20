@@ -1,15 +1,35 @@
-{ config, pkgs, ... }:
+{
+  config,
+  lib,
+  options,
+  pkgs,
+  ...
+}:
 let
-  setAuthExternal = stateDir: pkgs.writeShellScript "set-auth-external" ''
-    config="${stateDir}/config.xml"
-    if [ -f "$config" ]; then
-      # Idempotent: delete and recreate node to handle first boot and subsequent boots.
-      ${pkgs.xmlstarlet}/bin/xmlstarlet ed --inplace \
-        -d "/Config/AuthenticationMethod" \
-        -s "/Config" -t elem -n "AuthenticationMethod" -v "External" \
-        "$config"
-    fi
+  vpnConfinementDefinition = builtins.head (
+    builtins.filter (
+      definition: builtins.match ".*vpn-netns\\.nix" definition.file != null
+    ) options.systemd.services.definitionsWithLocations
+  );
+  vpnUp = vpnConfinementDefinition.value.wg.serviceConfig.ExecStart;
+  vpnUpWithoutIcmpCheck = pkgs.runCommand "wg-up-without-icmp-check" { } ''
+    mkdir -p $out/bin
+    substitute ${vpnUp} $out/bin/wg-up \
+      --replace-fail 'ping -c 1 "$EndpointIP" > /dev/null 2>&1' true
+    chmod +x $out/bin/wg-up
   '';
+  setAuthExternal =
+    stateDir:
+    pkgs.writeShellScript "set-auth-external" ''
+      config="${stateDir}/config.xml"
+      if [ -f "$config" ]; then
+        # Idempotent: delete and recreate node to handle first boot and subsequent boots.
+        ${pkgs.xmlstarlet}/bin/xmlstarlet ed --inplace \
+          -d "/Config/AuthenticationMethod" \
+          -s "/Config" -t elem -n "AuthenticationMethod" -v "External" \
+          "$config"
+      fi
+    '';
 in
 {
   sops.secrets."vpn_wg_conf" = {
@@ -40,12 +60,20 @@ in
   };
 
   systemd.services = {
+    # WireGuard endpoints commonly reject ICMP while accepting tunnel traffic.
+    wg.serviceConfig.ExecStart = lib.mkForce "${vpnUpWithoutIcmpCheck}/bin/wg-up";
     sonarr = {
-      unitConfig.RequiresMountsFor = [ "/data/media" "/data/downloads" ];
+      unitConfig.RequiresMountsFor = [
+        "/data/media"
+        "/data/downloads"
+      ];
       serviceConfig.ExecStartPre = [ (setAuthExternal config.nixarr.sonarr.stateDir) ];
     };
     radarr = {
-      unitConfig.RequiresMountsFor = [ "/data/media" "/data/downloads" ];
+      unitConfig.RequiresMountsFor = [
+        "/data/media"
+        "/data/downloads"
+      ];
       serviceConfig.ExecStartPre = [ (setAuthExternal config.nixarr.radarr.stateDir) ];
     };
     prowlarr = {

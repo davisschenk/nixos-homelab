@@ -1,10 +1,14 @@
 _: {
   disko.devices.disk.system = {
     type = "disk";
-    device = "/dev/sda";
+    device = "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi0-0-0-1";
     content = {
       type = "gpt";
       partitions = {
+        bios = {
+          size = "1M";
+          type = "EF02";
+        };
         ESP = {
           size = "512M";
           type = "EF00";
