@@ -9,10 +9,21 @@ in
     disabledRules = [
       # modbus / dnp3 app-layer protocols not compiled into this Suricata build
       "2009286"
-      "2250001" "2250002" "2250003" "2250005" "2250006"
-      "2250007" "2250008" "2250009"
-      "2270000" "2270001" "2270002" "2270003" "2270004"
-      "2270005" "2270006"
+      "2250001"
+      "2250002"
+      "2250003"
+      "2250005"
+      "2250006"
+      "2250007"
+      "2250008"
+      "2250009"
+      "2270000"
+      "2270001"
+      "2270002"
+      "2270003"
+      "2270004"
+      "2270005"
+      "2270006"
     ];
     settings = {
       "af-packet" = [
@@ -30,11 +41,21 @@ in
             filetype = "regular";
             filename = "/var/log/suricata/eve.json";
             types = [
-              { alert = { payload = false; packet = false; }; }
+              {
+                alert = {
+                  payload = false;
+                  packet = false;
+                };
+              }
             ];
           };
         }
-        { fast = { enabled = false; filename = "fast.log"; }; }
+        {
+          fast = {
+            enabled = false;
+            filename = "fast.log";
+          };
+        }
       ];
 
       logging = {
@@ -60,7 +81,7 @@ in
     configuration = {
       auth_enabled = false;
       server = {
-        http_listen_address = "127.0.0.1";
+        http_listen_address = "0.0.0.0";
         http_listen_port = p.loki;
         log_level = "warn";
       };
@@ -112,7 +133,7 @@ in
       sources = {
         systemd_journal = {
           type = "journald";
-          include_units = [];
+          include_units = [ ];
         };
 
         suricata_eve = {
@@ -255,6 +276,10 @@ in
     openFirewall = false;
   };
 
+  networking.firewall.extraInputRules = ''
+    iifname "wg-estuary" ip saddr 10.88.0.1 tcp dport ${toString p.loki} accept
+  '';
+
   # Impermanence creates dirs as root; services need ownership fixed
   # (Loki: 'loki' user; Suricata: 'suricata' user; fail2ban: root)
   systemd.tmpfiles.rules = [
@@ -265,9 +290,24 @@ in
 
   environment.persistence."/persist" = {
     directories = [
-      { directory = "/var/lib/loki"; user = "loki"; group = "loki"; mode = "0700"; }
-      { directory = "/var/log/suricata"; user = "suricata"; group = "suricata"; mode = "0755"; }
-      { directory = "/var/lib/fail2ban"; user = "root"; group = "root"; mode = "0750"; }
+      {
+        directory = "/var/lib/loki";
+        user = "loki";
+        group = "loki";
+        mode = "0700";
+      }
+      {
+        directory = "/var/log/suricata";
+        user = "suricata";
+        group = "suricata";
+        mode = "0755";
+      }
+      {
+        directory = "/var/lib/fail2ban";
+        user = "root";
+        group = "root";
+        mode = "0750";
+      }
     ];
   };
 }

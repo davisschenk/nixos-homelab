@@ -72,6 +72,20 @@ in
                     severity: warning
                   annotations:
                     summary: mangrove has no recent estuary WireGuard handshake
+                - alert: EstuaryFail2banExporterDown
+                  expr: up{job="estuary-fail2ban"} == 0
+                  for: 5m
+                  labels:
+                    severity: warning
+                  annotations:
+                    summary: estuary fail2ban exporter is unreachable
+                - alert: EstuaryLogShippingDown
+                  expr: node_systemd_unit_state{job="estuary",name="vector.service",state="active"} == 0
+                  for: 5m
+                  labels:
+                    severity: warning
+                  annotations:
+                    summary: estuary SSH probe log shipping is down
                 - alert: CloudflareTunnelDown
                   expr: node_systemd_unit_state{name="cloudflared.service",state="active"} == 0
                   for: 5m
@@ -94,6 +108,10 @@ in
         {
           job_name = "estuary";
           static_configs = [ { targets = [ "10.88.0.1:${toString p.nodeExporter}" ]; } ];
+        }
+        {
+          job_name = "estuary-fail2ban";
+          static_configs = [ { targets = [ "10.88.0.1:${toString p.fail2banExporter}" ]; } ];
         }
         {
           job_name = "estuary-ingress";
