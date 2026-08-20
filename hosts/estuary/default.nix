@@ -1,12 +1,6 @@
 { config, pkgs, ... }:
 let
-  dbipArchive = pkgs.fetchurl {
-    url = "https://download.db-ip.com/free/dbip-city-lite-2026-08.mmdb.gz";
-    hash = "sha256-K1MgPsNql1BRqBidwSB9Yk47wwL77kdkiShHZTO+adE=";
-  };
-  dbipCity = pkgs.runCommand "dbip-city-lite-2026-08.mmdb" { nativeBuildInputs = [ pkgs.gzip ]; } ''
-    gzip -dc ${dbipArchive} > "$out"
-  '';
+  dbipCity = import ../../modules/common/dbip-city.nix { inherit pkgs; };
 in
 {
   imports = [

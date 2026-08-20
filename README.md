@@ -1,168 +1,155 @@
-# mangrove homelab
+# Swamp homelab
 
-NixOS flake for `mangrove` — a self-hosted homelab server with impermanence (btrfs root wipe on boot), SOPS-encrypted secrets, and Cloudflare Tunnel ingress.
+Declarative infrastructure for two NixOS hosts:
 
-## Hardware
+- `mangrove` is the stateful home server and runs the application catalog.
+- `estuary` is a stateless OVHcloud edge host that forwards non-HTTP traffic to `mangrove` over WireGuard.
 
-| Component | Device |
-|-----------|--------|
-| NVMe (OS) | `/dev/nvme0n1` — btrfs, root + persist + nix + home |
-| HDD (data) | `/dev/sda` — btrfs, media / downloads / backups / vm |
+Terraform manages the edge infrastructure, deploy-rs activates both NixOS configurations, SOPS keeps secrets host-scoped, and GitHub Actions provides the reviewed GitOps path.
 
-## Services
+## Architecture
 
-| Service | URL | Description |
-|---------|-----|-------------|
-| Authentik | `auth.schenkenberger.dev` | SSO / identity provider |
-| Grafana | `grafana.schenkenberger.dev` | Metrics dashboards |
-| Mealie | `mealie.schenkenberger.dev` | Recipe manager |
-| RomM | `romm.schenkenberger.dev` | ROM manager |
-| Pelican Panel | `panel.schenkenberger.dev` | Game server panel |
-| Sonarr | `sonarr.schenkenberger.dev` | TV series manager |
-| Radarr | `radarr.schenkenberger.dev` | Movie manager |
-| Prowlarr | `prowlarr.schenkenberger.dev` | Indexer manager |
-| qBittorrent | `qbit.schenkenberger.dev` | Torrent client |
-| Actual Budget | `actual.schenkenberger.dev` | Budget manager |
-| Tilt Hydrometer Platform | `tilt.schenkenberger.dev` | Fermentation monitor |
-| Copyparty | `copyparty.schenkenberger.dev` | File server |
+```mermaid
+flowchart LR
+  web["HTTP/HTTPS clients"] --> cloudflare["Cloudflare Tunnel"]
+  cloudflare --> caddy["Caddy on mangrove"]
+  caddy --> apps["Homelab services"]
 
-All services are accessed via Cloudflare Tunnel → Caddy reverse proxy. No ports are exposed directly to the internet.
+  games["SFTP and game clients"] --> edge["estuary<br/>OVH Edge Firewall + nftables"]
+  edge -->|"DNAT, original client IP preserved"| tunnel["WireGuard 10.88.0.0/24"]
+  tunnel --> mangrove["mangrove"]
 
-## Repository Layout
-
-```
-hosts/mangrove/
-  default.nix            # Host-specific config (bootloader, GPU passthrough)
-  hardware-configuration.nix
-  disko.nix              # Disk partitioning layout
-
-modules/nixos/
-  base.nix               # Users, SSH, firewall, impermanence, btrfs wipe
-  networking.nix         # Cloudflare Tunnel + Caddy reverse proxy
-  auth.nix               # Authentik SSO
-  monitoring.nix         # Prometheus + Grafana
-  backup.nix             # Restic backups to local /data/backups
-  arr.nix                # Sonarr / Radarr / Prowlarr / qBittorrent (VPN)
-  media.nix              # Jellyfin
-  mealie.nix             # Recipe manager
-  romm.nix               # ROM manager (Docker)
-  pelican.nix            # Pelican Panel + Wings
-  gaming-vm.nix          # libvirt / QEMU / VFIO GPU passthrough
-  actual.nix             # Actual Budget
-  tilt.nix               # Tilt Hydrometer Platform (Docker + PostgreSQL)
-  copyparty.nix          # File server
-  ports.nix              # Centralised port assignments
-
-secrets/                 # SOPS-encrypted secrets (age key)
+  actions["GitHub-hosted deploy runner"] -->|"ephemeral WireGuard peer"| tunnel
+  terraform["Terraform + HCP state"] --> edge
+  terraform --> dns["Cloudflare DNS"]
 ```
 
-## Prerequisites
+HTTP and HTTPS continue through Cloudflare Tunnel and Caddy. Only the ports declared in [`infra/ingress.json`](infra/ingress.json) are forwarded through `estuary`:
 
-- [Nix](https://nixos.org/download) with flakes enabled
-- [just](https://github.com/casey/just)
-- [BWS CLI](https://bitwarden.com/help/secrets-manager-cli/) (`bws`) + `BWS_ACCESS_TOKEN` for bootstrapping the age key
+| Traffic | Public port | Destination |
+|---|---:|---|
+| Pelican SFTP | TCP 2022 | `mangrove` |
+| Games | TCP/UDP 25565–25575 | `mangrove` |
+| WireGuard | UDP 51820 | `estuary` |
 
-## First-Time Setup (from this workstation)
+The forwarding path does not masquerade connections. Mangrove marks replies for forwarded connections and policy-routes them back through WireGuard, so applications see the real client address while unrelated traffic keeps using the home ISP.
 
-### 1. Restore the SOPS age key
+## Hosts
+
+| Host | Role | Address | State model |
+|---|---|---|---|
+| `mangrove` | Applications, storage, monitoring, home ingress | LAN `10.0.0.2`, WireGuard `10.88.0.2` | Impermanent root with persistent data |
+| `estuary` | Public WireGuard hub and non-HTTP ingress | WireGuard `10.88.0.1` | Reproducible and stateless |
+| GitHub deploy peer | Temporary deploy-rs access | WireGuard `10.88.0.3` | Created and removed per production run |
+
+Estuary is an OVHcloud VPS-1 in Hillsboro. Terraform selects the current monthly plan and mandatory options from the live catalog, refuses a combined recurring price of $10 or more, and protects the VPS from accidental destruction.
+
+## Security and observability
+
+- Public TCP 22 on Estuary is dropped by nftables before it reaches SSH. Administration and deployments use WireGuard.
+- Every public SSH probe is counted in Prometheus. Rate-limited samples are enriched locally with DB-IP City Lite, shipped to Loki, and displayed on the **Security — Estuary SSH Probes** Grafana map.
+- Mangrove Fail2ban bans are exported to Prometheus and geolocated into the **Security — Fail2ban** dashboard.
+- Vector ships systemd, Fail2ban, and Suricata events to Loki without using IP addresses as high-cardinality stream labels.
+- Prometheus monitors both hosts, WireGuard handshake age, public ingress, Fail2ban exporters, and log shipping.
+- Suricata provides alert-focused network IDS telemetry on Mangrove.
+
+GeoIP locations are approximate. DB-IP attribution is included in both map dashboards.
+
+## Services on Mangrove
+
+| Service | URL | Purpose |
+|---|---|---|
+| Authentik | `auth.schenkenberger.dev` | Identity provider and SSO |
+| Grafana | `grafana.schenkenberger.dev` | Metrics, logs, alerts, and security maps |
+| Coder | `coder.schenkenberger.dev` | Remote development workspaces |
+| Pelican | `panel.schenkenberger.dev` | Game server panel and Wings |
+| Jellyfin | `jellyfin.schenkenberger.dev` | Media server |
+| Seerr | `seerr.schenkenberger.dev` | Media requests |
+| Sonarr / Radarr / Prowlarr | service subdomains | Media automation |
+| qBittorrent | `qbit.schenkenberger.dev` | VPN-routed downloads |
+| RomM | `romm.schenkenberger.dev` | ROM library |
+| Mealie | `mealie.schenkenberger.dev` | Recipes |
+| Actual Budget | `actual.schenkenberger.dev` | Budgeting |
+| Wealthfolio | `wealthfolio.schenkenberger.dev` | Portfolio tracking |
+| Tilt | `tilt.schenkenberger.dev` | Fermentation monitoring |
+| Copyparty | `files.schenkenberger.dev` | File access |
+| Frigate | `frigate.schenkenberger.dev` | Camera NVR |
+| Home Assistant | `homeassistant.schenkenberger.dev` | Home automation |
+| VM console | `console.schenkenberger.dev` | Gaming VM console |
+
+Most web applications are protected by Authentik through Caddy.
+
+## Infrastructure and repository layout
+
+```text
+hosts/
+  estuary/                Edge host and disk layout
+  mangrove/               Home server and disk layout
+infra/
+  ingress.json            Shared public-ingress contract
+  terraform/              OVH VPS/firewall and Cloudflare DNS
+modules/
+  common/                  Host-neutral base, WireGuard, and GeoIP data
+  nixos/                   Mangrove services, networking, and monitoring
+secrets/                   SOPS-encrypted host and service secrets
+tests/
+  estuary-ingress.nix     Three-node forwarding and policy-routing VM test
+```
+
+Terraform state is remotely locked and versioned in the HCP Terraform organization `davisschenk-homelab`, workspace `nixos-homelab-production`. Terraform manages the Estuary VPS, OVH edge firewall, and DNS-only `play.schenkenberger.dev` record. The existing Cloudflare Tunnel and wildcard DNS remain outside Terraform.
+
+## Development workflow
+
+Install Nix with flakes enabled and `just`. Before opening a PR:
 
 ```bash
-export BWS_ACCESS_TOKEN=<your-token>
-just bootstrap-age-key
+just fmt-check
+just lint
 ```
 
-This writes the age key to `~/.config/sops/age/keys.txt` so SOPS can decrypt secrets.
-
-### 2. Push changes to GitHub
-
-The installer ISO pulls the flake from `github:davisschenk/nixos-homelab`, so all changes must be pushed first:
+Run validation that matches the risk of the change:
 
 ```bash
-git push origin master
+just validate-ingress   # infra/ingress.json or its validator
+just build-estuary      # Estuary configuration changes
+just build              # Mangrove configuration changes
+just test-ingress       # WireGuard, nftables, DNAT, or policy routing
+just check              # broad flake/deploy-rs evaluation when needed
 ```
 
-### 3. Build the installer ISO
+PR CI is path-filtered. Nix changes receive formatting and lint checks without full system builds; Terraform changes receive formatting, validation, a speculative plan, and a protected production apply before merge. Fork PRs never receive production credentials.
 
-```bash
-just build-iso
-# produces result/iso/mangrove-installer.iso
-```
+A protected push to `master` runs the production sequence:
 
-### 4. Flash to USB
+1. Validate ingress and Terraform.
+2. Recompute the production Terraform plan.
+3. Pass the protected `production` environment gate.
+4. Apply the reviewed plan.
+5. Join WireGuard from the ephemeral GitHub-hosted runner.
+6. Deploy `estuary`, then `mangrove`, with deploy-rs rollback protection.
+7. Remove the runner's WireGuard and SSH keys.
 
-```bash
-# Check your USB drive with: lsblk
-sudo dd if=result/iso/mangrove-installer.iso of=/dev/sdX bs=4M status=progress conv=fsync
-```
-
-### 5. Install
-
-1. Boot `mangrove` from the USB
-2. Run:
-   ```bash
-   install-mangrove
-   ```
-   This will **erase `/dev/nvme0n1` and `/dev/sda`** and install NixOS from GitHub.
-3. Reboot when prompted
-
-### 6. First SSH access
-
-```bash
-ssh davis@mangrove.local
-```
-
-Uses the ed25519 key already baked into the config. No password needed.
-
-### 7. Bootstrap SOPS age key on the new machine
-
-The age key must be present at `/persist/etc/sops/age/keys.txt` before secrets can be decrypted at runtime:
-
-```bash
-ssh davis@mangrove.local
-export BWS_ACCESS_TOKEN=<your-token>
-just bootstrap-age-key   # run from a clone of the repo on the server,
-                         # or manually write the key to the path above
-```
-
-Then restart any services that depend on SOPS secrets.
-
-## Day-to-Day Operations
-
-```bash
-just deploy          # Build + deploy to mangrove over SSH
-just dry-run         # Preview what would change without activating
-just check           # Evaluate the flake (catch errors)
-just lint            # Run statix + deadnix linters
-just lint-fix        # Auto-fix lint warnings
-just fmt             # Format all .nix files with nixfmt
-just update          # Update all flake inputs
-just edit <secret>   # Edit a SOPS secret (e.g. just edit authentik)
-just view <secret>   # View a decrypted secret read-only
-just rekey           # Re-encrypt all secrets after rotating age key
-just check-secrets   # Verify all secret files are encrypted
-```
+Manual `just deploy` remains available for bootstrap or recovery, but normal changes flow through the reviewed production workflow. See [`AGENTS.md`](AGENTS.md) for repository conventions.
 
 ## Secrets
 
-Secrets are encrypted with [SOPS](https://github.com/getsops/sops) using an age key. The key is stored in Bitwarden Secrets Manager and can be restored with `just bootstrap-age-key`.
+SOPS encrypts service credentials and host WireGuard private keys with age recipients. Mangrove and Estuary have separate identities; Estuary cannot decrypt Mangrove service secrets. Administrative recovery keys are backed up in Bitwarden Secrets Manager, while CI WireGuard and SSH deployment keys live only in the protected GitHub `production` environment.
 
-| File | Contents |
-|------|----------|
-| `secrets/authentik.yaml` | Authentik secret key |
-| `secrets/mail.yaml` | Shared mail credentials (Mailjet) |
-| `secrets/grafana.yaml` | Grafana secret key |
-| `secrets/mealie.yaml` | Mealie OIDC client secret, OpenAI key |
-| `secrets/coder.yaml` | Coder OIDC client secret, template-push API token, GitHub external-auth client id/secret |
-| `secrets/pelican.yaml` | Pelican app key, DB password, Wings token |
-| `secrets/romm.yaml` | RomM DB password, auth secret, IGDB keys |
-| `secrets/restic.yaml` | Restic repository path + password |
-| `secrets/vpn.yaml` | WireGuard VPN config for arr stack |
-| `secrets/cloudflare-tunnel.yaml` | Cloudflare Tunnel token |
+Useful commands:
 
-## Architecture Notes
+```bash
+just bootstrap-age-key
+just edit <secret>
+just view <secret>
+just rekey
+just check-secrets
+```
 
-- **Impermanence**: `/` is wiped on every boot (btrfs `@` subvolume recreated). Only `/persist`, `/nix`, `/home`, and `/var/log` survive reboots.
-- **Ingress**: All traffic enters via Cloudflare Tunnel. Caddy handles TLS termination and reverse proxying. No ports are open to the internet.
-- **SSO**: Most services use Authentik forward auth via Caddy.
-- **Backups**: Restic backs up to `/data/backups/restic` on the local 8TB drive.
-- **GPU passthrough**: AMD Radeon 540/550 (`1002:699f`, `1002:aae0`) is passed to a Windows gaming VM via VFIO.
+Never commit plaintext credentials or age private keys.
+
+## Bootstrap and recovery
+
+- [`docs/estuary-bootstrap.md`](docs/estuary-bootstrap.md) covers Terraform creation, nixos-anywhere installation, WireGuard bring-up, and closing bootstrap SSH.
+- `just build-iso` builds the destructive Mangrove installer ISO. The generated `install-mangrove` command erases the configured NVMe and HDD, so verify device IDs before using it.
+- Mangrove persists `/persist`, `/nix`, `/home`, `/var/log`, and application data while recreating its root subvolume on boot.
+- Email hosting remains deliberately separate from Estuary; applications continue using an authenticated SMTP relay.

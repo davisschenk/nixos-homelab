@@ -450,9 +450,9 @@
         "basemap": { "config": {}, "name": "Layer 0", "type": "default" },
         "controls": {
           "mouseWheelZoom": true,
-          "showAttribution": false,
+          "showAttribution": true,
           "showDebug": false,
-          "showScale": false,
+          "showScale": true,
           "showZoom": true
         },
         "layers": [
@@ -462,11 +462,11 @@
               "style": {
                 "color": { "fixed": "dark-red" },
                 "opacity": 0.7,
-                "size": { "fixed": 8, "max": 20, "min": 4 },
+                "size": { "field": "Value", "fixed": 8, "max": 20, "min": 4 },
                 "symbol": { "fixed": "img/icons/marker/circle.svg", "mode": "fixed" }
               }
             },
-            "location": { "lookup": "banned_ip", "mode": "lookup" },
+            "location": { "latitude": "latitude", "longitude": "longitude", "mode": "coords" },
             "name": "Banned IPs",
             "tooltip": true,
             "type": "markers"
@@ -479,8 +479,8 @@
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "${loki_datasource}" },
-          "expr": "sum by (banned_ip) (count_over_time({job=\"fail2ban-bans\"}[$__range]))",
-          "legendFormat": "{{banned_ip}}",
+          "expr": "sum by (latitude, longitude, banned_ip, city, country, country_code, jail) (count_over_time({job=\"fail2ban-bans\"} | json | __error__=\"\" | label_format latitude=\"{{.latitude}}\", longitude=\"{{.longitude}}\", banned_ip=\"{{.banned_ip}}\", city=\"{{.city}}\", country=\"{{.country}}\", country_code=\"{{.country_code}}\" [$__range]))",
+          "legendFormat": "{{banned_ip}} — {{city}}, {{country}} ({{jail}})",
           "instant": true,
           "refId": "A"
         }
@@ -489,18 +489,27 @@
         {
           "id": "labelsToFields",
           "options": { "mode": "columns" }
+        },
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              { "destinationType": "number", "targetField": "latitude" },
+              { "destinationType": "number", "targetField": "longitude" }
+            ]
+          }
         }
       ]
     },
     {
       "datasource": { "type": "loki", "uid": "${loki_datasource}" },
       "fieldConfig": { "defaults": {}, "overrides": [] },
-      "gridPos": { "h": 14, "w": 8, "x": 16, "y": 32 },
+      "gridPos": { "h": 11, "w": 8, "x": 16, "y": 32 },
       "id": 41,
       "options": {
         "dedupStrategy": "none",
         "enableLogDetails": true,
-        "prettifyLogMessage": false,
+        "prettifyLogMessage": true,
         "showCommonLabels": false,
         "showLabels": true,
         "showTime": true,
@@ -512,11 +521,23 @@
       "targets": [
         {
           "datasource": { "type": "loki", "uid": "${loki_datasource}" },
-          "expr": "{job=\"fail2ban-bans\"}",
+          "expr": "{job=\"fail2ban-bans\"} | json",
           "legendFormat": "",
           "refId": "A"
         }
       ]
+    },
+    {
+      "datasource": { "type": "loki", "uid": "${loki_datasource}" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 3, "w": 8, "x": 16, "y": 43 },
+      "id": 42,
+      "options": {
+        "content": "Locations are approximate. [IP geolocation by DB-IP](https://db-ip.com)",
+        "mode": "markdown"
+      },
+      "title": "About This Data",
+      "type": "text"
     },
     {
       "collapsed": false,
