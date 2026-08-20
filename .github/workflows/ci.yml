@@ -1,26 +1,66 @@
 name: Validate infrastructure
 
-on:
-  pull_request:
-    paths:
-      - ".github/**"
-      - ".sops.yaml"
-      - "flake.nix"
-      - "flake.lock"
-      - "hosts/**"
-      - "infra/**"
-      - "modules/**"
-      - "tests/**"
-      - "justfile"
-      - "statix.toml"
-      - "secrets/estuary.yaml"
-      - "secrets/wireguard.yaml"
+on: pull_request
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      ingress: ${{ steps.filter.outputs.ingress }}
+      nix: ${{ steps.filter.outputs.nix }}
+      terraform: ${{ steps.filter.outputs.terraform }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: filter
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          ingress=false
+          nix=false
+          terraform=false
+
+          while IFS= read -r -d '' path; do
+            case "$path" in
+              infra/ingress.json)
+                ingress=true
+                nix=true
+                terraform=true
+                ;;
+              infra/scripts/validate_ingress.py)
+                ingress=true
+                ;;
+            esac
+
+            case "$path" in
+              infra/terraform/*)
+                terraform=true
+                ;;
+            esac
+
+            case "$path" in
+              .sops.yaml|flake.nix|flake.lock|hosts/*|modules/*|tests/*|justfile|statix.toml|secrets/estuary.yaml|secrets/wireguard.yaml)
+                nix=true
+                ;;
+            esac
+          done < <(git diff --name-only --diff-filter=ACMRT -z "$BASE_SHA" "$HEAD_SHA")
+
+          {
+            printf 'ingress=%s\n' "$ingress"
+            printf 'nix=%s\n' "$nix"
+            printf 'terraform=%s\n' "$terraform"
+          } >> "$GITHUB_OUTPUT"
+
   ingress:
+    needs: changes
+    if: needs.changes.outputs.ingress == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -29,6 +69,8 @@ jobs:
       - run: python3 infra/scripts/validate_ingress.py
 
   terraform:
+    needs: changes
+    if: needs.changes.outputs.terraform == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -45,7 +87,8 @@ jobs:
       - run: terraform validate
 
   terraform-plan:
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    needs: changes
+    if: needs.changes.outputs.terraform == 'true' && github.event.pull_request.head.repo.full_name == github.repository
     environment: planning
     runs-on: ubuntu-latest
     defaults:
@@ -68,9 +111,73 @@ jobs:
         with:
           terraform_version: "1.14.5"
       - run: terraform init
-      - run: terraform plan -input=false -lock=false -no-color
+      - run: terraform plan -input=false -lock=false -out=review.tfplan
+      - run: terraform show -json review.tfplan | python3 scripts/assert_estuary_not_created.py
+      - run: terraform show -no-color review.tfplan
+
+  terraform-apply-production:
+    needs: [changes, terraform, terraform-plan]
+    if: needs.changes.outputs.terraform == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+    environment: production
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      OVH_APPLICATION_KEY: ${{ secrets.OVH_APPLICATION_KEY }}
+      OVH_APPLICATION_SECRET: ${{ secrets.OVH_APPLICATION_SECRET }}
+      OVH_CONSUMER_KEY: ${{ secrets.OVH_CONSUMER_KEY }}
+      OVH_ENDPOINT: ovh-us
+      TF_TOKEN_app_terraform_io: ${{ secrets.TFE_TOKEN }}
+      TF_VAR_bootstrap_complete: ${{ vars.TF_BOOTSTRAP_COMPLETE || 'false' }}
+      TF_VAR_bootstrap_ssh_cidr: ${{ vars.TF_BOOTSTRAP_SSH_CIDR }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Verify the approved revision is current
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha }}
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          current_sha=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq .head.sha)
+          [[ "$current_sha" == "$EXPECTED_SHA" ]]
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd
+        with:
+          terraform_version: "1.14.5"
+      - name: Apply the approved Terraform revision
+        run: |
+          terraform init
+          terraform plan -input=false -out=production.tfplan
+          terraform show -json production.tfplan | python3 scripts/assert_estuary_not_created.py
+          terraform apply -input=false production.tfplan
+
+  terraform-apply:
+    needs: [changes, terraform-apply-production]
+    if: always()
+    runs-on: ubuntu-latest
+    env:
+      APPLY_RESULT: ${{ needs.terraform-apply-production.result }}
+      CHANGES_RESULT: ${{ needs.changes.result }}
+      TERRAFORM_CHANGED: ${{ needs.changes.outputs.terraform }}
+    steps:
+      - run: |
+          if [[ "$CHANGES_RESULT" != success ]]; then
+            exit 1
+          fi
+          if [[ "$TERRAFORM_CHANGED" == true && "$APPLY_RESULT" != success ]]; then
+            exit 1
+          fi
 
   nix:
+    needs: changes
+    if: needs.changes.outputs.nix == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
