@@ -613,14 +613,25 @@ class Reconciler:
                 payload = {
                     "egg": egg["id"],
                     "environment": environment,
-                    "skip_scripts": True,
                 }
                 if spec.get("image") is not None:
                     payload["image"] = spec["image"]
                 if spec.get("startup") is not None:
                     payload["startup"] = spec["startup"]
+                # skip_scripts=True keeps this patch from silently triggering
+                # a reinstall on its own. Pelican persists the flag on the
+                # server rather than scoping it to this request, so clear it
+                # again immediately -- otherwise a later operator-initiated
+                # "Reinstall Server" click in the panel would silently no-op.
                 self.application.request(
-                    "PATCH", f"/servers/{actual['id']}/startup", payload=payload
+                    "PATCH",
+                    f"/servers/{actual['id']}/startup",
+                    payload={**payload, "skip_scripts": True},
+                )
+                self.application.request(
+                    "PATCH",
+                    f"/servers/{actual['id']}/startup",
+                    payload={**payload, "skip_scripts": False},
                 )
 
     def check_backup(self):
