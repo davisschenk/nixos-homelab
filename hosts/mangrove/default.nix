@@ -64,7 +64,7 @@
       # installs Forge automatically. https://www.curseforge.com/minecraft/modpacks/star-technology
       environment = {
         PROJECT_ID = "924189";
-        VERSION_ID = "8115040"; # 1.20.1 THETA 1
+        VERSION_ID = "8174581"; # StarT Theta 1 HF 3 Server Files (1.20.1 THETA 1 HOTFIX 3)
       };
       secretEnvironmentFile = config.sops.templates."star-technology-environment".path;
 
