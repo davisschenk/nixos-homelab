@@ -128,6 +128,19 @@ The reconciler patches declared metadata and runtime configuration but never
 starts, stops, or reinstalls a server. A reported `operator action required`
 must be handled through Pelican during a maintenance window.
 
+## Infrarust backend addressing
+
+Wings does not literally bind a published container port to a `127.0.0.1`
+allocation -- it substitutes its own configured `docker.network.interface`
+(the node's Docker bridge gateway) instead. The Pelican-declared allocation
+IP should still be `127.0.0.1` (that's what tells Wings to keep it off public
+interfaces), but Infrarust needs to connect to whatever Wings actually
+publishes to. Check `docker.network.interface` in
+`/var/lib/pelican-wings/config.yml` on the node and set
+`mylab.gameServers.infrarust.backendAddress` to match -- otherwise Infrarust
+will report `backend unreachable` / `Connection refused` for every join
+attempt even though the server itself is running fine.
+
 ## Adoption and cutover
 
 1. Deploy the module with `enable = true`, an empty `servers` set, and

@@ -341,6 +341,7 @@ let
         admin_port = cfg.infrarust.adminPort;
         admin_api_key_file = cfg.infrarust.adminApiKeyFile;
         external_url = cfg.infrarust.externalUrl;
+        backend_address = cfg.infrarust.backendAddress;
         runtime_dir = "/run/infrarust";
         plugins_dir = "/var/lib/infrarust/plugins";
         ban_file = "/var/lib/infrarust/bans.json";
@@ -442,6 +443,20 @@ in
       externalUrl = mkOption {
         type = types.str;
         default = "https://infrarust.schenkenberger.dev";
+      };
+      backendAddress = mkOption {
+        type = types.str;
+        default = "127.0.0.1";
+        description = ''
+          Address Infrarust actually connects to for 127.0.0.1-declared
+          backend allocations. Wings does not literally bind published
+          container ports to 127.0.0.1 -- it substitutes its configured
+          docker.network.interface (the node's Docker bridge gateway) instead.
+          Check /var/lib/pelican-wings/config.yml's docker.network.interface
+          on this node and set this to match; the Pelican-facing allocation
+          IP stays 127.0.0.1 regardless, since that's what signals Wings to
+          keep the allocation off public interfaces in the first place.
+        '';
       };
     };
   };

@@ -790,10 +790,18 @@ def render_infrarust(manifest):
             if allocation["primary"]
         )
         primary = spec["allocations"][primary_name]
+        # Wings does not literally bind published container ports to a
+        # 127.0.0.1 allocation -- it substitutes its own configured
+        # docker.network.interface (the node's Docker bridge gateway, e.g.
+        # 172.19.0.1) instead. The Pelican-facing allocation stays
+        # 127.0.0.1 (that's what tells Wings to keep it off public
+        # interfaces); Infrarust needs to connect to backend_address, the
+        # node's actual resulting host-side address, instead.
+        backend_ip = infrarust.get("backend_address") or primary["ip"]
         lines = [
             f"name = {toml_string(name)}",
             f"domains = {toml_array(route['domains'])}",
-            f"addresses = {toml_array([primary['ip'] + ':' + str(primary['port'])])}",
+            f"addresses = {toml_array([backend_ip + ':' + str(primary['port'])])}",
             f"proxy_mode = {toml_string(route['proxy_mode'])}",
             f"send_proxy_protocol = {'true' if route['send_proxy_protocol'] else 'false'}",
         ]

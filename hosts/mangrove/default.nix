@@ -53,7 +53,13 @@
     enable = true;
     defaultOwner.email = "davis.schenkenberger@gmail.com";
 
-    infrarust.enable = true;
+    infrarust = {
+      enable = true;
+      # Wings publishes 127.0.0.1-declared allocations on its own
+      # docker.network.interface instead of literal loopback -- see
+      # /var/lib/pelican-wings/config.yml on mangrove.
+      backendAddress = "172.19.0.1";
+    };
 
     servers.star-technology = {
       displayName = "Star Technology";

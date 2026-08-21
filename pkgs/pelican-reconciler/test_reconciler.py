@@ -60,6 +60,7 @@ def manifest():
             "admin_port": 8084,
             "admin_api_key_file": "/not-used",
             "external_url": "https://infrarust.example.test",
+            "backend_address": "127.0.0.1",
             "runtime_dir": "/not-used",
             "plugins_dir": "/not-used/plugins",
             "ban_file": "/not-used/bans.json",
@@ -727,6 +728,33 @@ class RendererTests(unittest.TestCase):
                 directory / "run" / "servers" / "survival.toml"
             ).read_text(encoding="utf-8")
             self.assertIn("send_proxy_protocol = true", server_config)
+
+    def test_backend_address_overrides_allocation_ip_in_route(self):
+        # Wings does not literally bind published container ports to a
+        # 127.0.0.1 allocation -- it substitutes its own configured
+        # docker.network.interface instead. Infrarust must connect to
+        # backend_address, not the Pelican-declared allocation IP.
+        value = manifest()
+        value["infrarust"]["backend_address"] = "172.19.0.1"
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            (directory / "admin-key").write_text(
+                "admin-key-with-adequate-length", encoding="utf-8"
+            )
+            value["infrarust"]["admin_api_key_file"] = str(directory / "admin-key")
+            value["infrarust"]["runtime_dir"] = str(directory / "run")
+            value["infrarust"]["plugins_dir"] = str(directory / "plugins")
+            value["infrarust"]["ban_file"] = str(directory / "bans.json")
+            value["state_file"] = str(directory / "state.json")
+            reconciler.render_infrarust(value)
+            server_config = (
+                directory / "run" / "servers" / "survival.toml"
+            ).read_text(encoding="utf-8")
+            self.assertIn('addresses = ["172.19.0.1:25566"]', server_config)
+            self.assertEqual(
+                value["servers"]["survival"]["allocations"]["primary"]["ip"],
+                "127.0.0.1",
+            )
 
     def test_wake_on_connect_uses_runtime_identity(self):
         value = manifest()
