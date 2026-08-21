@@ -509,6 +509,68 @@ class ReconciliationTests(unittest.TestCase):
         )
         self.assertFalse(any(path.endswith("/power") for _, path, _ in calls))
 
+    def test_startup_drift_resets_skip_scripts_after_patch(self):
+        value = manifest()
+        spec = value["servers"]["survival"]
+        instance = self.make_reconciler(True)
+        allocation = item(
+            "allocation",
+            {"id": 10, "ip": "127.0.0.1", "port": 25566, "assigned": True},
+            {
+                "server": {
+                    "data": item("server", {"id": 20, "uuid": SERVER_UUID})
+                }
+            },
+        )
+        server = item(
+            "server",
+            {
+                "id": 20,
+                "uuid": SERVER_UUID,
+                "identifier": "bbbbbbbb",
+                "external_id": "nix:survival",
+                "name": "Survival",
+                "description": "",
+                "user": 2,
+                "node": 1,
+                "allocation": 10,
+                "egg": 3,
+                "oom_killer": True,
+                "limits": spec["limits"],
+                "feature_limits": spec["feature_limits"],
+                "container": {
+                    "image": "example/java:21",
+                    "startup_command": "java -jar server.jar",
+                    "environment": {"VERSION": "1.20"},
+                },
+            },
+            {"allocations": {"data": [allocation]}},
+        )
+        instance.application.servers = [server]
+        instance.application.allocations = [allocation]
+        instance.servers = [server]
+        instance.allocations = [allocation]
+        instance.reconcile_present("survival", spec)
+        self.assertIn(
+            "operator action required survival (restart or reinstall)",
+            instance.actions,
+        )
+        startup_calls = [
+            payload
+            for method, path, payload in instance.application.calls
+            if method == "PATCH" and path == "/servers/20/startup"
+        ]
+        # A drift patch must arm skip_scripts to avoid triggering its own
+        # reinstall, then immediately disarm it again -- otherwise a later
+        # operator-initiated "Reinstall Server" click would silently no-op,
+        # since Pelican persists the flag on the server.
+        self.assertEqual(len(startup_calls), 2)
+        self.assertTrue(startup_calls[0]["skip_scripts"])
+        self.assertFalse(startup_calls[1]["skip_scripts"])
+        for payload in startup_calls:
+            self.assertEqual(payload["egg"], 3)
+            self.assertEqual(payload["environment"]["VERSION"], "1.21")
+
 
 class FakeClient:
     def __init__(self, state="stopped"):
