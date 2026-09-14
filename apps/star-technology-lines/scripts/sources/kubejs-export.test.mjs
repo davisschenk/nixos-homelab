@@ -72,3 +72,54 @@ test('keeps ambiguous ingredients and unknown recipe types for review', async ()
     await rm(root, { recursive: true, force: true })
   }
 })
+
+test('resolves exported ore tags and separates non-consumed meshes and circuits', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'starline-export-'))
+  try {
+    const recipes = path.join(root, 'recipes', 'start', 'rock_filtrator')
+    const tags = path.join(root, 'tags', 'minecraft', 'item', 'forge', 'raw_materials')
+    await mkdir(recipes, { recursive: true })
+    await mkdir(tags, { recursive: true })
+    await writeFile(
+      path.join(tags, 'gold.json'),
+      JSON.stringify(['minecraft:raw_gold', 'minecraft:raw_gold']),
+    )
+    await writeFile(
+      path.join(recipes, 'geodes.json'),
+      JSON.stringify({
+        type: 'gtceu:rock_filtrator',
+        duration: 1200,
+        inputs: {
+          item: [
+            { content: { type: 'gtceu:sized', count: 4, ingredient: { tag: 'forge:raw_materials/gold' } } },
+            { content: { item: 'exnihilosequentia:string_mesh' }, chance: 0, maxChance: 10000 },
+            {
+              content: {
+                type: 'gtceu:sized',
+                count: 1,
+                ingredient: { type: 'gtceu:circuit', configuration: 2 },
+              },
+              chance: 0,
+              maxChance: 10000,
+            },
+          ],
+        },
+        outputs: {
+          item: [{ content: { item: 'kubejs:diamond_geode' }, chance: 3500, tierChanceBoost: 750 }],
+        },
+        tickInputs: { eu: [{ content: 15 }] },
+      }),
+    )
+    const result = await importKubeJsExport(root)
+    const recipe = result.recipes[0]
+    assert.equal(recipe.inputs.length, 1)
+    assert.equal(recipe.inputs[0].id, 'minecraft:raw_gold')
+    assert.equal(recipe.catalysts[0].id, 'exnihilosequentia:string_mesh')
+    assert.equal(recipe.circuit, 2)
+    assert.equal(recipe.outputs[0].chance, 0.35)
+    assert.equal(recipe.outputs[0].chanceBoost, 0.075)
+    assert.deepEqual(recipe.unresolved, [])
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})

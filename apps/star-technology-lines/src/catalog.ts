@@ -1,10 +1,12 @@
 import { createStage, newId, type Port, type Stage } from './model'
+import { minimumTier } from './planning'
 
 export type RecipeStack = {
   id: string
   amount: number
   unit: 'items' | 'mB'
   chance: number | null
+  chanceBoost?: number
   minAmount?: number
   maxAmount?: number
   nbt?: string
@@ -41,6 +43,7 @@ export type Catalog = {
   packMode: string
   sources: CatalogSource[]
   recipes: CatalogRecipe[]
+  tags?: Record<string, string[]>
   diagnostics: { file: string; issue: string }[]
   fileCount: number
 }
@@ -52,15 +55,26 @@ export const displayName = (id: string) =>
     .replace(/\b\w/g, (letter) => letter.toUpperCase())
 export const displayStack = (stack: RecipeStack) =>
   `${stack.minAmount == null ? stack.amount : `${stack.minAmount}–${stack.maxAmount}`} ${stack.unit} ${displayName(stack.id)}`
-export const recipeIsReady = (recipe: CatalogRecipe) =>
+export const recipeIsReady = (recipe: CatalogRecipe) => recipeIsCalculable(recipe)
+
+export const recipeIsCalculable = (recipe: CatalogRecipe) =>
   recipe.family === 'gtceu' &&
   recipe.inputs.length > 0 &&
   recipe.outputs.length > 0 &&
   recipe.durationTicks != null &&
+  recipe.durationTicks > 0 &&
   recipe.eut != null &&
   recipe.inputs.every((stack) => stack.chance == null || stack.chance >= 1) &&
-  recipe.outputs.every((stack) => stack.chance == null || stack.chance >= 1) &&
+  recipe.outputs.every((stack) => stack.minAmount == null) &&
   recipe.unresolved.length === 0
+
+export const inputMaterials = (catalog: Catalog, input: RecipeStack) =>
+  input.id.startsWith('#') ? (catalog.tags?.[`${input.unit}|${input.id.slice(1)}`] ?? [input.id]) : [input.id]
+
+export const inputAcceptsPort = (catalog: Catalog, input: RecipeStack, port: Port) =>
+  input.unit === port.unit &&
+  (port.materialId === input.id ||
+    (port.materialId != null && inputMaterials(catalog, input).includes(port.materialId)))
 
 export const sourceLink = (
   recipe: Pick<CatalogRecipe, 'sourceId' | 'sourcePath' | 'sourceLine'>,
@@ -80,6 +94,8 @@ export const stageFromRecipe = (recipe: CatalogRecipe, x: number, y: number): St
     amount: stack.amount,
     unit: stack.unit,
     materialId: stack.id,
+    ...(stack.chance != null ? { chance: stack.chance } : {}),
+    ...(stack.chanceBoost != null ? { chanceBoost: stack.chanceBoost } : {}),
   })
   return {
     ...stage,
@@ -87,7 +103,7 @@ export const stageFromRecipe = (recipe: CatalogRecipe, x: number, y: number): St
       ? displayName(recipe.outputs[0].id)
       : displayName(recipe.gameId ?? recipe.machine),
     machine: displayName(recipe.machine),
-    tier: '—',
+    tier: minimumTier(recipe.eut),
     duration: recipe.durationTicks == null ? null : recipe.durationTicks / 20,
     eut: recipe.eut,
     inputs: recipe.inputs.map(makePort),
@@ -103,11 +119,11 @@ export const stageFromRecipe = (recipe: CatalogRecipe, x: number, y: number): St
             .map((stack) => `${stack.id} ${stack.minAmount}–${stack.maxAmount}`)
             .join(', ')}. The stage amount is the maximum, not an expected rate.`
         : '',
-      [...recipe.inputs, ...recipe.outputs].some((stack) => stack.chance != null && stack.chance < 1)
-        ? 'Chance-based stacks are shown at their full amount. Verify expected yield before using rates.'
+      recipe.outputs.some((stack) => stack.chance != null && stack.chance < 1)
+        ? 'Chance-based outputs use expected rates. Individual recipe cycles vary.'
         : '',
       recipe.circuit != null ? `Circuit: ${recipe.circuit}.` : '',
-      !recipeIsReady(recipe)
+      !recipeIsCalculable(recipe)
         ? `Review source before use: ${recipe.unresolved.join('; ') || 'chance-based or incomplete recipe'}`
         : '',
     ]

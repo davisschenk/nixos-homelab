@@ -584,13 +584,14 @@ function parseRecipe(base, ast, constants, relativePath, line, sourceId) {
           destination.push({
             ...stack,
             chance: method.name.startsWith('chanced') ? Number(flat[1]) / 10000 : null,
+            ...(method.name.startsWith('chanced') && typeof flat[2] === 'number'
+              ? { chanceBoost: flat[2] / 10000 }
+              : {}),
           })
         else recipe.unresolved.push(`${method.name}: ${String(value)}`)
         if (stack?.nbt) recipe.unresolved.push(`${method.name}: NBT payload`)
         if (method.name.startsWith('chanced')) break
       }
-      if (method.name.startsWith('chanced') && flat[2])
-        recipe.unresolved.push(`${method.name}: chance changes with machine tier`)
     }
   }
   if (base.idNode && !gameId) recipe.unresolved.push(`id: ${base.idNode.getText(ast)}`)
