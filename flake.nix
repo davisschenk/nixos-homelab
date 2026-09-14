@@ -149,6 +149,7 @@
         mangrove-iso = self.nixosConfigurations.mangrove-iso.config.system.build.images."iso-installer";
         infrarust = pkgs.callPackage ./pkgs/infrarust { };
         pelican-reconciler = pkgs.callPackage ./pkgs/pelican-reconciler { };
+        app-portal = pkgs.callPackage ./pkgs/app-portal { };
       };
 
       deploy.nodes = {

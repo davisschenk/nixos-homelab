@@ -21,6 +21,7 @@ let
     "jellyseerr"
     "copyparty"
     "actual"
+    "apps"
     "outpost"
     "frigate"
     "home-assistant"

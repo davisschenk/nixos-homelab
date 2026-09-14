@@ -7,6 +7,7 @@
 let
   # nixarr VPN namespace host-side gateway — see nixarr vpnNamespace subnet config
   nixarrVpnGateway = "192.168.15.1";
+  appPortal = pkgs.callPackage ../../pkgs/app-portal { };
 in
 {
   # Cloudflare Tunnel sole public ingress; no ports need opening
@@ -93,6 +94,19 @@ in
         @auth host auth.schenkenberger.dev
         handle @auth {
           reverse_proxy localhost:${toString config.mylab.ports.authentik}
+        }
+
+        @apps host apps.schenkenberger.dev
+        handle @apps {
+          handle /outpost.goauthentik.io/* {
+            reverse_proxy localhost:${toString config.mylab.ports.authentik}
+          }
+
+          handle {
+            import authentik_forward_auth
+            root * ${appPortal}
+            file_server
+          }
         }
 
         # Mealie's own OIDC handles auth; forward-auth would add unnecessary hop
