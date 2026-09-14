@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#101820" />
+    <meta
+      name="description"
+      content="Private tools and small apps for the Schenkenberger homelab."
+    />
+    <title>Apps · Schenkenberger</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script type="module" src="/main.js"></script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header">
+        <a class="brand" href="/" aria-label="Apps home">
+          <span class="brand-mark" aria-hidden="true"
+            ><i></i><i></i><i></i><i></i
+          ></span>
+          <span class="brand-copy"
+            ><strong>Schenkenberger</strong><small>PRIVATE APPS</small></span
+          >
+        </a>
+        <a class="account-link" href="https://auth.schenkenberger.dev/if/user/">
+          <span class="account-dot" aria-hidden="true"></span>
+          Authentik account
+          <svg aria-hidden="true" viewBox="0 0 20 20" fill="none">
+            <path
+              d="M5 15 15 5M7 5h8v8"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </a>
+      </header>
+
+      <main>
+        <section class="hero" aria-labelledby="page-title">
+          <div class="hero-copy">
+            <p class="eyebrow">
+              <span class="eyebrow-line"></span> THE WORKBENCH
+            </p>
+            <h1 id="page-title">Useful tools, <em>one place.</em></h1>
+            <p class="hero-description">
+              A home for the apps built around my projects. Sign in once, then
+              pick up where you left off.
+            </p>
+          </div>
+          <div class="hero-art" aria-hidden="true">
+            <div class="art-grid"></div>
+            <span class="art-orbit art-orbit-one"></span>
+            <span class="art-orbit art-orbit-two"></span>
+            <span class="art-core"></span>
+            <span class="art-node art-node-one"></span>
+            <span class="art-node art-node-two"></span>
+            <span class="art-node art-node-three"></span>
+            <span class="art-line art-line-one"></span>
+            <span class="art-line art-line-two"></span>
+          </div>
+        </section>
+
+        <section class="library" aria-labelledby="library-title">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">YOUR COLLECTION</p>
+              <h2 id="library-title">
+                App library
+                <span id="app-count" aria-label="Number of apps"></span>
+              </h2>
+            </div>
+            <label class="search-field">
+              <svg aria-hidden="true" viewBox="0 0 20 20" fill="none">
+                <circle
+                  cx="8.8"
+                  cy="8.8"
+                  r="5.9"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                />
+                <path
+                  d="m13.2 13.2 4.1 4.1"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                />
+              </svg>
+              <span class="sr-only">Search apps</span>
+              <input
+                id="search"
+                type="search"
+                placeholder="Find an app"
+                autocomplete="off"
+              />
+              <kbd>/</kbd>
+            </label>
+          </div>
+          <div id="app-grid" class="app-grid" aria-live="polite"></div>
+          <p id="empty-state" class="empty-state" hidden>
+            No apps match that search.
+          </p>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <span>Made for the homelab</span
+        ><span class="footer-separator" aria-hidden="true"></span
+        ><span>Private by default</span>
+      </footer>
+    </div>
+  </body>
+</html>
