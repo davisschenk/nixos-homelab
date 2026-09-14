@@ -180,3 +180,27 @@ export const netOutputs = (project: Project, analysis: LineAnalysis) => {
   }
   return [...totals.values()].sort((a, b) => b.rate - a.rate)
 }
+
+export const outputTotals = (project: Project, analysis: LineAnalysis) => {
+  const totals = new Map<
+    string,
+    { name: string; unit: Port['unit']; produced: number; allocated: number; net: number }
+  >()
+  for (const stage of project.stages) {
+    for (const output of stage.outputs) {
+      const produced = analysis.stages.get(stage.id)?.outputs.get(output.id) ?? 0
+      const net = analysis.available.get(output.id) ?? 0
+      if (produced <= 1e-9 && net <= 1e-9) continue
+      const key = `${output.materialId ?? output.name}|${output.unit}`
+      const current = totals.get(key)
+      totals.set(key, {
+        name: output.name,
+        unit: output.unit,
+        produced: (current?.produced ?? 0) + produced,
+        allocated: (current?.allocated ?? 0) + Math.max(0, produced - net),
+        net: (current?.net ?? 0) + net,
+      })
+    }
+  }
+  return [...totals.values()].sort((a, b) => b.net - a.net || a.name.localeCompare(b.name))
+}

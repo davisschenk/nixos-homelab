@@ -454,6 +454,23 @@ svg {
   letter-spacing: 1.3px;
   color: #c3cedd;
 }
+.view-tabs {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.view-tabs button {
+  border: 0;
+  border-radius: 5px;
+  padding: 6px 10px;
+  background: transparent;
+  color: #96a8bd;
+  font-size: 11px;
+}
+.view-tabs button.active {
+  background: #3b3153;
+  color: #e3d2ff;
+}
 .toolbar-divider {
   height: 14px;
   border-left: 1px solid #3b4959;
@@ -489,6 +506,17 @@ svg {
   padding: 0 8px;
   margin-left: 6px;
   font-size: 10px;
+}
+.canvas-tools .arrange-button {
+  width: auto;
+  padding: 0 10px;
+  margin-right: 9px;
+  color: #e2cfff;
+  border-color: #705791;
+}
+.canvas-tools .arrange-button:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 .canvas-viewport {
   flex: 1;
@@ -747,6 +775,207 @@ svg {
 }
 .output-cell div {
   margin-right: 4px;
+}
+.output-choice {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  padding: 2px 0;
+  margin-right: 4px;
+  background: transparent;
+  text-align: right;
+  cursor: pointer;
+}
+.output-cell.active,
+.output-cell:hover {
+  background: #49396255;
+}
+.output-choice:hover strong,
+.output-cell.active strong {
+  color: #e1c4ff;
+}
+
+.output-rate-card,
+.recipe-preview {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  margin: 15px 0;
+  border: 1px solid #45536a;
+  border-radius: 7px;
+  background: #1c2a3a;
+}
+.output-rate-card span,
+.recipe-preview small {
+  color: #9caec3;
+  font-size: 10px;
+}
+.output-rate-card strong,
+.recipe-preview strong {
+  color: #e7d6ff;
+  font-size: 12px;
+}
+.output-inspector .field {
+  margin-top: 16px;
+}
+.recipe-options {
+  max-height: 250px;
+  overflow: auto;
+  display: grid;
+  gap: 5px;
+  margin-top: 9px;
+}
+.recipe-options button {
+  display: grid;
+  gap: 3px;
+  text-align: left;
+  padding: 8px;
+  border: 1px solid #34465c;
+  border-radius: 6px;
+  background: #1c2939;
+  color: #e4ebf5;
+}
+.recipe-options button.active {
+  border-color: #aa84df;
+  background: #352b49;
+}
+.recipe-options small,
+.recipe-options p {
+  color: #9bacc0;
+  font-size: 10px;
+  margin: 0;
+}
+.recipe-preview div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+}
+.recipe-preview div span {
+  color: #c2cedc;
+}
+.recipe-preview div b {
+  color: #e8d7ff;
+  text-align: right;
+}
+.output-add {
+  width: 100%;
+  justify-content: center;
+}
+.output-secondary {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+.output-secondary button {
+  border: 0;
+  background: transparent;
+  color: #bca0ed;
+  text-align: left;
+  font-size: 11px;
+  padding: 3px 0;
+}
+.output-secondary button:disabled {
+  opacity: 0.5;
+}
+
+.totals-view {
+  flex: 1;
+  overflow: auto;
+  padding: 24px;
+}
+.totals-heading h2 {
+  font-family: 'Space Grotesk', sans-serif;
+  margin: 5px 0;
+  color: #f1eafa;
+}
+.totals-heading p {
+  margin: 0;
+  color: #9bacc0;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.totals-summary {
+  display: flex;
+  gap: 12px;
+  margin: 20px 0;
+}
+.totals-summary div {
+  min-width: 120px;
+  padding: 14px;
+  border: 1px solid #35465a;
+  border-radius: 7px;
+  background: #1b2736;
+  display: grid;
+  gap: 5px;
+}
+.totals-summary strong {
+  color: #e5d1ff;
+  font-size: 20px;
+}
+.totals-summary span {
+  color: #9bacc0;
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+.totals-group {
+  margin: 23px 0;
+}
+.totals-group h3 {
+  color: #e5edf7;
+  font-size: 14px;
+  margin: 0 0 10px;
+}
+.totals-table {
+  border: 1px solid #334459;
+  border-radius: 7px;
+  overflow: hidden;
+}
+.totals-table-head,
+.totals-table-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 2fr) repeat(3, minmax(110px, 1fr));
+  gap: 12px;
+  align-items: center;
+  padding: 11px 14px;
+}
+.totals-table-head {
+  background: #202d3e;
+  color: #8fa3bc;
+  font-size: 9px;
+  letter-spacing: 0.7px;
+}
+.totals-table-row {
+  border-top: 1px solid #2d3d50;
+  color: #b7c5d6;
+  font-size: 11px;
+}
+.totals-table-row strong {
+  color: #e1e9f4;
+}
+.totals-table-row b {
+  color: #d4b5ff;
+}
+@media (max-width: 700px) {
+  .canvas-toolbar {
+    padding: 0 8px;
+  }
+  .view-tabs button {
+    padding: 6px;
+  }
+  .totals-summary {
+    flex-wrap: wrap;
+  }
+  .totals-view {
+    padding: 14px;
+  }
+  .totals-table {
+    overflow-x: auto;
+  }
+  .totals-table-head,
+  .totals-table-row {
+    min-width: 620px;
+  }
 }
 .node-footer {
   height: 34px;
