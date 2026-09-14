@@ -1,0 +1,27 @@
+{
+  "name": "star-technology-lines",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "catalog:build": "node scripts/build-catalog.mjs",
+    "catalog:check": "node scripts/check-catalog.mjs",
+    "test": "node --test scripts/**/*.test.mjs",
+    "format": "prettier --write src scripts index.html package.json tsconfig.json README.md",
+    "format:check": "prettier --check src scripts index.html package.json tsconfig.json README.md"
+  },
+  "dependencies": {
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "prettier": "^3.9.6",
+    "typescript": "~5.9.2",
+    "vite": "^7.1.5"
+  }
+}
