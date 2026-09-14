@@ -31,18 +31,16 @@ import {
   machinesForInput,
   minimumTier,
   netOutputs,
+  outputTotals,
   outputChance,
   stageTiming,
   stackChance,
   VOLTAGE_TIERS,
-  type LineAnalysis,
   type StageAnalysis,
 } from './planning'
+import { arrangeStages, canvasSize, NODE_WIDTH, stageHeight } from './layout'
 import './styles.css'
 
-const CANVAS_WIDTH = 2300
-const CANVAS_HEIGHT = 1500
-const NODE_WIDTH = 300
 const PORT_OFFSET = 150
 const PORT_STEP = 36
 
@@ -145,6 +143,8 @@ function App() {
   const [workspace, setWorkspace] = useState<Workspace>(loadWorkspace)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedLinkId, setSelectedLinkId] = useState<string | null>(null)
+  const [selectedOutput, setSelectedOutput] = useState<Pending>(null)
+  const [view, setView] = useState<'canvas' | 'totals'>('canvas')
   const [pending, setPending] = useState<Pending>(null)
   const [zoom, setZoom] = useState(1)
   const [notice, setNotice] = useState('')
@@ -156,12 +156,17 @@ function App() {
   const [sourceKey, setSourceKey] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const viewportRef = useRef<HTMLDivElement>(null)
+  const inspectorRef = useRef<HTMLElement>(null)
   const dragRef = useRef<Drag>(null)
   const project = workspace.projects.find((p) => p.id === workspace.activeId) ?? workspace.projects[0]
   const selectedStage = project.stages.find((s) => s.id === selectedId)
   const selectedLink = project.links.find((l) => l.id === selectedLinkId)
+  const outputStage = project.stages.find((stage) => stage.id === selectedOutput?.stageId)
+  const outputPort = outputStage?.outputs.find((port) => port.id === selectedOutput?.portId)
   const analysis = analyzeLine(project)
   const finalOutputs = netOutputs(project, analysis)
+  const totals = outputTotals(project, analysis)
+  const dimensions = canvasSize(project)
   const sourceRecipes = useMemo(
     () =>
       catalog?.recipes.filter(
@@ -239,6 +244,7 @@ function App() {
       viewportRef.current.scrollLeft = 80
       viewportRef.current.scrollTop = 170
     }
+    setSelectedOutput(null)
   }, [workspace.activeId])
 
   const updateProject = (change: (current: Project) => Project) => {
@@ -262,9 +268,10 @@ function App() {
     const y = viewport
       ? Math.max(35, Math.round((viewport.scrollTop + viewport.clientHeight / 2) / zoom - 100))
       : 240
-    const stage = createStage(Math.min(x, CANVAS_WIDTH - NODE_WIDTH), Math.min(y, CANVAS_HEIGHT - 250))
+    const stage = createStage(x, y)
     updateProject((p) => ({ ...p, stages: [...p.stages, stage] }))
     setSelectedId(stage.id)
+    setSelectedOutput(null)
     setSelectedLinkId(null)
     setPending(null)
   }
@@ -277,13 +284,10 @@ function App() {
     const y = viewport
       ? Math.max(35, Math.round((viewport.scrollTop + viewport.clientHeight / 2) / zoom - 100))
       : 240
-    const stage = stageFromRecipe(
-      recipe,
-      Math.min(x, CANVAS_WIDTH - NODE_WIDTH),
-      Math.min(y, CANVAS_HEIGHT - 250),
-    )
+    const stage = stageFromRecipe(recipe, x, y)
     updateProject((p) => ({ ...p, stages: [...p.stages, stage] }))
     setSelectedId(stage.id)
+    setSelectedOutput(null)
     setSelectedLinkId(null)
     setCatalogOpen(false)
     setNotice(recipeIsReady(recipe) ? 'Recipe added to line' : 'Added with fields to review against source')
@@ -307,15 +311,20 @@ function App() {
     next.stages = [source]
     setWorkspace((current) => ({ projects: [...current.projects, next], activeId: next.id }))
     setSelectedId(source.id)
+    setSelectedOutput(null)
     setSelectedLinkId(null)
     setPending(null)
   }
 
   const addSourceHere = () => {
-    const source = makeSource(130, Math.min(220 + sourceStages.length * 500, CANVAS_HEIGHT - 450))
+    const source = makeSource(
+      130,
+      Math.max(220, ...sourceStages.map((stage) => stage.y + stageHeight(stage) + 80)),
+    )
     if (!source) return
     updateProject((current) => ({ ...current, stages: [...current.stages, source] }))
     setSelectedId(source.id)
+    setSelectedOutput(null)
     setSelectedLinkId(null)
   }
 
@@ -329,8 +338,8 @@ function App() {
     if (recipe && !input) return
     const tier = recipe ? nextTier(source.tier, recipe.eut) : source.tier
     const machines = recipe && input ? machinesForInput(recipe, input, incomingRate, tier) : 1
-    const x = Math.min(source.x + 410, CANVAS_WIDTH - NODE_WIDTH - 20)
-    const y = Math.min(source.y + 22 + source.outputs.indexOf(output) * 130, CANVAS_HEIGHT - 350)
+    const x = source.x + 410
+    const y = source.y + 22 + source.outputs.indexOf(output) * 130
     const stage: Stage = recipe
       ? { ...stageFromRecipe(recipe, x, y), tier, parallel: machines ?? 1 }
       : {
@@ -369,6 +378,7 @@ function App() {
       links: [...current.links, link],
     }))
     setSelectedId(stage.id)
+    setSelectedOutput(null)
     setSelectedLinkId(null)
     setNotice(
       recipe
@@ -393,22 +403,18 @@ function App() {
       ...stage,
       id: newId(),
       name: `${stage.name} copy`,
-      x: Math.min(stage.x + 80, CANVAS_WIDTH - NODE_WIDTH),
-      y: Math.min(stage.y + 80, CANVAS_HEIGHT - 250),
+      x: stage.x + 80,
+      y: stage.y + 80,
       inputs: stage.inputs.map(clonePort),
       outputs: stage.outputs.map(clonePort),
       recipeRef: stage.recipeRef ? { ...stage.recipeRef, modified: true } : undefined,
     }
     updateProject((p) => ({ ...p, stages: [...p.stages, clone] }))
     setSelectedId(clone.id)
+    setSelectedOutput(null)
   }
 
-  const handlePort = (stage: Stage, port: Port, direction: 'input' | 'output') => {
-    if (direction === 'output') {
-      setPending({ stageId: stage.id, portId: port.id })
-      setNotice('Select an input port to connect')
-      return
-    }
+  const handleInputPort = (stage: Stage, port: Port) => {
     if (!pending) {
       setNotice('Select an output port first')
       return
@@ -453,6 +459,26 @@ function App() {
     setNotice(`${sourcePort.name} connected to ${port.name}`)
   }
 
+  const openOutput = (stage: Stage, port: Port) => {
+    setSelectedOutput({ stageId: stage.id, portId: port.id })
+    setSelectedId(null)
+    setSelectedLinkId(null)
+    setView('canvas')
+    if (window.innerWidth <= 900)
+      requestAnimationFrame(() =>
+        inspectorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+      )
+  }
+
+  const autoArrange = () => {
+    updateProject(arrangeStages)
+    setNotice('Stages arranged by material flow')
+    if (viewportRef.current) {
+      viewportRef.current.scrollLeft = 0
+      viewportRef.current.scrollTop = 0
+    }
+  }
+
   const startDrag = (event: React.PointerEvent<HTMLDivElement>, stage: Stage) => {
     if (event.button !== 0) return
     event.currentTarget.setPointerCapture(event.pointerId)
@@ -464,6 +490,7 @@ function App() {
       nodeY: stage.y,
     }
     setSelectedId(stage.id)
+    setSelectedOutput(null)
     setSelectedLinkId(null)
   }
 
@@ -472,11 +499,17 @@ function App() {
     if (!drag) return
     const x = Math.max(
       8,
-      Math.min(CANVAS_WIDTH - NODE_WIDTH - 8, Math.round(drag.nodeX + (event.clientX - drag.startX) / zoom)),
+      Math.min(
+        dimensions.width - NODE_WIDTH - 8,
+        Math.round(drag.nodeX + (event.clientX - drag.startX) / zoom),
+      ),
     )
     const y = Math.max(
       8,
-      Math.min(CANVAS_HEIGHT - 270, Math.round(drag.nodeY + (event.clientY - drag.startY) / zoom)),
+      Math.min(
+        dimensions.height - stageHeight(project.stages.find((s) => s.id === drag.id)!) - 8,
+        Math.round(drag.nodeY + (event.clientY - drag.startY) / zoom),
+      ),
     )
     updateStage(drag.id, (s) => ({ ...s, x, y }))
   }
@@ -821,263 +854,304 @@ function App() {
             </p>
           </section>
         )}
-        <OutputPathways
-          project={project}
-          analysis={analysis}
-          recipes={outputRecipes}
-          catalog={catalog}
-          catalogReady={catalog !== null}
-          onAdd={addFromOutput}
-        />
-        <section className="net-outputs" aria-label="Total output">
-          <div className="section-title">
-            <div>
-              <span className="eyebrow">AFTER LINKED STAGES</span>
-              <h2>Total output</h2>
-            </div>
-            <small>Expected rates per minute</small>
-          </div>
-          {finalOutputs.length ? (
-            <div className="net-output-list">
-              {finalOutputs.map((output) => (
-                <div key={`${output.name}|${output.unit}`}>
-                  <span>{output.name}</span>
-                  <strong>{formatPerMinute(output.rate, output.unit)}</strong>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="pathway-empty">Add a source stage to calculate its outputs.</p>
-          )}
-          {analysis.warnings.map((warning) => (
-            <p className="calculation-note" key={warning}>
-              {warning}
-            </p>
-          ))}
-        </section>
         <section className="workspace-body">
           <div className="canvas-panel">
             <div className="canvas-toolbar">
-              <div>
-                <span className="canvas-live" /> <strong>LINE CANVAS</strong>
-                <span className="toolbar-divider" /> Drag stages to arrange your flow
+              <div className="view-tabs" role="tablist" aria-label="Line views">
+                <button
+                  role="tab"
+                  aria-selected={view === 'canvas'}
+                  className={view === 'canvas' ? 'active' : ''}
+                  onClick={() => setView('canvas')}
+                >
+                  Canvas
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={view === 'totals'}
+                  className={view === 'totals' ? 'active' : ''}
+                  onClick={() => setView('totals')}
+                >
+                  Total output
+                </button>
               </div>
               <div className="canvas-tools">
-                <button
-                  onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.1).toFixed(1)))}
-                  aria-label="Zoom out"
-                >
-                  −
-                </button>
-                <span>{Math.round(zoom * 100)}%</span>
-                <button
-                  onClick={() => setZoom((z) => Math.min(1.5, +(z + 0.1).toFixed(1)))}
-                  aria-label="Zoom in"
-                >
-                  +
-                </button>
-                <button className="zoom-reset" onClick={() => setZoom(1)}>
-                  Reset
-                </button>
+                {view === 'canvas' && (
+                  <button
+                    className="arrange-button"
+                    onClick={autoArrange}
+                    disabled={project.stages.length < 2}
+                  >
+                    Arrange
+                  </button>
+                )}
+                {view === 'canvas' && (
+                  <>
+                    <button
+                      onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.1).toFixed(1)))}
+                      aria-label="Zoom out"
+                    >
+                      −
+                    </button>
+                    <span>{Math.round(zoom * 100)}%</span>
+                    <button
+                      onClick={() => setZoom((z) => Math.min(1.5, +(z + 0.1).toFixed(1)))}
+                      aria-label="Zoom in"
+                    >
+                      +
+                    </button>
+                    <button className="zoom-reset" onClick={() => setZoom(1)}>
+                      Reset
+                    </button>
+                  </>
+                )}
               </div>
             </div>
-            <div
-              className="canvas-viewport"
-              ref={viewportRef}
-              onClick={(event) => {
-                if (event.target === event.currentTarget) {
-                  setSelectedId(null)
-                  setSelectedLinkId(null)
-                  setPending(null)
-                }
-              }}
-            >
-              <div
-                className="canvas-sizer"
-                style={{ width: CANVAS_WIDTH * zoom, height: CANVAS_HEIGHT * zoom }}
-              >
+            {view === 'canvas' ? (
+              <>
                 <div
-                  className="canvas-surface"
-                  style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT, transform: `scale(${zoom})` }}
+                  className="canvas-viewport"
+                  ref={viewportRef}
                   onClick={(event) => {
                     if (event.target === event.currentTarget) {
                       setSelectedId(null)
                       setSelectedLinkId(null)
+                      setSelectedOutput(null)
                       setPending(null)
                     }
                   }}
                 >
-                  <div className="canvas-watermark">
-                    STARLINE <span>/</span> FLOW 01
-                  </div>
-                  <svg
-                    className="connection-layer"
-                    width={CANVAS_WIDTH}
-                    height={CANVAS_HEIGHT}
-                    aria-label="Stage connections"
+                  <div
+                    className="canvas-sizer"
+                    style={{ width: dimensions.width * zoom, height: dimensions.height * zoom }}
                   >
-                    {project.links.map((link) => {
-                      const path = linkPath(link)
-                      return (
-                        path && (
-                          <g
-                            key={link.id}
-                            className={`connection ${link.id === selectedLinkId ? 'selected' : ''}`}
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              setSelectedLinkId(link.id)
-                              setSelectedId(null)
-                            }}
-                          >
-                            <path className="connection-hit" d={path} />
-                            <path className="connection-line" d={path} />
-                            <circle cx={Number(path.split(' ')[1])} cy={Number(path.split(' ')[2])} r="3" />
-                          </g>
-                        )
-                      )
-                    })}
-                  </svg>
-                  {project.stages.map((stage, index) => (
                     <div
-                      key={stage.id}
-                      className={`stage-node ${selectedId === stage.id ? 'selected' : ''}`}
-                      style={{ left: stage.x, top: stage.y }}
+                      className="canvas-surface"
+                      style={{
+                        width: dimensions.width,
+                        height: dimensions.height,
+                        transform: `scale(${zoom})`,
+                      }}
                       onClick={(event) => {
-                        event.stopPropagation()
-                        setSelectedId(stage.id)
-                        setSelectedLinkId(null)
+                        if (event.target === event.currentTarget) {
+                          setSelectedId(null)
+                          setSelectedLinkId(null)
+                          setSelectedOutput(null)
+                          setPending(null)
+                        }
                       }}
                     >
-                      <div
-                        className="node-head"
-                        onPointerDown={(event) => startDrag(event, stage)}
-                        onPointerMove={moveDrag}
-                        onPointerUp={() => {
-                          dragRef.current = null
-                        }}
-                        onPointerCancel={() => {
-                          dragRef.current = null
-                        }}
+                      <div className="canvas-watermark">
+                        STARLINE <span>/</span> FLOW 01
+                      </div>
+                      <svg
+                        className="connection-layer"
+                        width={dimensions.width}
+                        height={dimensions.height}
+                        aria-label="Stage connections"
                       >
-                        <span className="node-index">{String(index + 1).padStart(2, '0')}</span>
-                        <div className="node-title">
-                          <strong>{stage.name}</strong>
-                          <small>{stage.machine}</small>
-                        </div>
-                        <span className="node-tier">{stage.tier}</span>
-                      </div>
-                      <div className="node-meta">
-                        <span>
-                          <Icon name="clock" size={13} />{' '}
-                          {analysis.stages.get(stage.id)?.timing.durationSeconds == null
-                            ? '?'
-                            : `${analysis.stages.get(stage.id)?.timing.durationSeconds}s`}
-                        </span>
-                        <span>
-                          <Icon name="bolt" size={13} /> {analysis.stages.get(stage.id)?.timing.eut ?? '?'}{' '}
-                          EU/t
-                        </span>
-                        <span>×{stage.parallel}</span>
-                      </div>
-                      <div className="port-labels">
-                        <span>INPUTS</span>
-                        <span>OUTPUTS</span>
-                      </div>
-                      <div className="port-rows">
-                        {Array.from(
-                          { length: Math.max(1, stage.inputs.length, stage.outputs.length) },
-                          (_, portIndex) => (
-                            <div className="port-row" key={portIndex}>
-                              <div className="port-cell input-cell">
-                                {stage.inputs[portIndex] && (
-                                  <>
-                                    <button
-                                      className="port-dot input-dot"
-                                      title={`Connect to ${stage.inputs[portIndex].name}`}
-                                      onClick={(event) => {
-                                        event.stopPropagation()
-                                        handlePort(stage, stage.inputs[portIndex], 'input')
-                                      }}
-                                    />
-                                    <div>
-                                      <strong>{stage.inputs[portIndex].name}</strong>
-                                      <small>
-                                        {stage.inputs[portIndex].amount} {stage.inputs[portIndex].unit} /
-                                        recipe
-                                      </small>
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                              <div className="port-cell output-cell">
-                                {stage.outputs[portIndex] && (
-                                  <>
-                                    <div>
-                                      <strong>{stage.outputs[portIndex].name}</strong>
-                                      <small>
-                                        {stage.outputs[portIndex].amount} {stage.outputs[portIndex].unit} /
-                                        recipe
-                                      </small>
-                                    </div>
-                                    <button
-                                      className={`port-dot output-dot ${pending?.portId === stage.outputs[portIndex].id ? 'pending' : ''}`}
-                                      title={`Connect ${stage.outputs[portIndex].name}`}
-                                      onClick={(event) => {
-                                        event.stopPropagation()
-                                        handlePort(stage, stage.outputs[portIndex], 'output')
-                                      }}
-                                    />
-                                  </>
-                                )}
-                              </div>
+                        {project.links.map((link) => {
+                          const path = linkPath(link)
+                          return (
+                            path && (
+                              <g
+                                key={link.id}
+                                className={`connection ${link.id === selectedLinkId ? 'selected' : ''}`}
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  setSelectedLinkId(link.id)
+                                  setSelectedId(null)
+                                  setSelectedOutput(null)
+                                }}
+                              >
+                                <path className="connection-hit" d={path} />
+                                <path className="connection-line" d={path} />
+                                <circle
+                                  cx={Number(path.split(' ')[1])}
+                                  cy={Number(path.split(' ')[2])}
+                                  r="3"
+                                />
+                              </g>
+                            )
+                          )
+                        })}
+                      </svg>
+                      {project.stages.map((stage, index) => (
+                        <div
+                          key={stage.id}
+                          className={`stage-node ${selectedId === stage.id || selectedOutput?.stageId === stage.id ? 'selected' : ''}`}
+                          style={{ left: stage.x, top: stage.y }}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            setSelectedId(stage.id)
+                            setSelectedOutput(null)
+                            setSelectedLinkId(null)
+                          }}
+                        >
+                          <div
+                            className="node-head"
+                            onPointerDown={(event) => startDrag(event, stage)}
+                            onPointerMove={moveDrag}
+                            onPointerUp={() => {
+                              dragRef.current = null
+                            }}
+                            onPointerCancel={() => {
+                              dragRef.current = null
+                            }}
+                          >
+                            <span className="node-index">{String(index + 1).padStart(2, '0')}</span>
+                            <div className="node-title">
+                              <strong>{stage.name}</strong>
+                              <small>{stage.machine}</small>
                             </div>
-                          ),
-                        )}
-                      </div>
-                      <div className="node-footer">
-                        <span>
-                          <span className="tiny-spark">✦</span>{' '}
-                          {stage.outputs[0]
-                            ? formatPerMinute(
-                                analysis.stages.get(stage.id)?.outputs.get(stage.outputs[0].id) ?? 0,
-                                stage.outputs[0].unit,
-                              )
-                            : 'No output'}
-                        </span>
-                        <Icon name="chevron" size={14} />
-                      </div>
+                            <span className="node-tier">{stage.tier}</span>
+                          </div>
+                          <div className="node-meta">
+                            <span>
+                              <Icon name="clock" size={13} />{' '}
+                              {analysis.stages.get(stage.id)?.timing.durationSeconds == null
+                                ? '?'
+                                : `${analysis.stages.get(stage.id)?.timing.durationSeconds}s`}
+                            </span>
+                            <span>
+                              <Icon name="bolt" size={13} />{' '}
+                              {analysis.stages.get(stage.id)?.timing.eut ?? '?'} EU/t
+                            </span>
+                            <span>×{stage.parallel}</span>
+                          </div>
+                          <div className="port-labels">
+                            <span>INPUTS</span>
+                            <span>OUTPUTS</span>
+                          </div>
+                          <div className="port-rows">
+                            {Array.from(
+                              { length: Math.max(1, stage.inputs.length, stage.outputs.length) },
+                              (_, portIndex) => (
+                                <div className="port-row" key={portIndex}>
+                                  <div className="port-cell input-cell">
+                                    {stage.inputs[portIndex] && (
+                                      <>
+                                        <button
+                                          className="port-dot input-dot"
+                                          title={`Connect to ${stage.inputs[portIndex].name}`}
+                                          onClick={(event) => {
+                                            event.stopPropagation()
+                                            handleInputPort(stage, stage.inputs[portIndex])
+                                          }}
+                                        />
+                                        <div>
+                                          <strong>{stage.inputs[portIndex].name}</strong>
+                                          <small>
+                                            {stage.inputs[portIndex].amount} {stage.inputs[portIndex].unit} /
+                                            recipe
+                                          </small>
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                  <div
+                                    className={`port-cell output-cell ${selectedOutput?.portId === stage.outputs[portIndex]?.id ? 'active' : ''}`}
+                                  >
+                                    {stage.outputs[portIndex] && (
+                                      <>
+                                        <button
+                                          className="output-choice"
+                                          title={`Choose recipe for ${stage.outputs[portIndex].name}`}
+                                          onClick={(event) => {
+                                            event.stopPropagation()
+                                            openOutput(stage, stage.outputs[portIndex])
+                                          }}
+                                        >
+                                          <strong>{stage.outputs[portIndex].name}</strong>
+                                          <small>
+                                            {stage.outputs[portIndex].amount} {stage.outputs[portIndex].unit}{' '}
+                                            / recipe
+                                          </small>
+                                        </button>
+                                        <button
+                                          className={`port-dot output-dot ${pending?.portId === stage.outputs[portIndex].id || selectedOutput?.portId === stage.outputs[portIndex].id ? 'pending' : ''}`}
+                                          title={`Choose recipe for ${stage.outputs[portIndex].name}`}
+                                          onClick={(event) => {
+                                            event.stopPropagation()
+                                            openOutput(stage, stage.outputs[portIndex])
+                                          }}
+                                        />
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              ),
+                            )}
+                          </div>
+                          <div className="node-footer">
+                            <span>
+                              <span className="tiny-spark">✦</span>{' '}
+                              {stage.outputs[0]
+                                ? formatPerMinute(
+                                    analysis.stages.get(stage.id)?.outputs.get(stage.outputs[0].id) ?? 0,
+                                    stage.outputs[0].unit,
+                                  )
+                                : 'No output'}
+                            </span>
+                            <Icon name="chevron" size={14} />
+                          </div>
+                        </div>
+                      ))}
+                      {project.stages.length === 0 && (
+                        <div className="empty-canvas">
+                          <span>✳</span>
+                          <h2>Your line starts here</h2>
+                          <p>Add a stage to define its machine, inputs, outputs, and production rate.</p>
+                          <button className="button primary" onClick={addStage}>
+                            <Icon name="plus" size={17} /> Add first stage
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  ))}
-                  {project.stages.length === 0 && (
-                    <div className="empty-canvas">
-                      <span>✳</span>
-                      <h2>Your line starts here</h2>
-                      <p>Add a stage to define its machine, inputs, outputs, and production rate.</p>
-                      <button className="button primary" onClick={addStage}>
-                        <Icon name="plus" size={17} /> Add first stage
-                      </button>
-                    </div>
-                  )}
+                  </div>
                 </div>
-              </div>
-            </div>
-            <div className="canvas-foot">
-              <span>
-                <span className="mouse-hint">↔</span> Drag node headers to move
-              </span>
-              <span>
-                Click an output, then an input, to connect <span className="foot-separator">·</span>{' '}
-                {project.stages.length} nodes on canvas
-              </span>
-            </div>
+                <div className="canvas-foot">
+                  <span>
+                    <span className="mouse-hint">↔</span> Drag node headers to move
+                  </span>
+                  <span>
+                    Click an output to choose its next recipe <span className="foot-separator">·</span>{' '}
+                    {project.stages.length} nodes on canvas
+                  </span>
+                </div>
+              </>
+            ) : (
+              <TotalOutputView
+                project={project}
+                totals={totals}
+                finalCount={finalOutputs.length}
+                warnings={analysis.warnings}
+              />
+            )}
           </div>
 
-          <aside className="inspector">
+          <aside className="inspector" ref={inspectorRef}>
             <div className="inspector-heading">
               <span>INSPECTOR</span>
               <span className="inspector-spark">✦</span>
             </div>
-            {selectedStage ? (
+            {outputStage && outputPort ? (
+              <OutputRecipeInspector
+                key={outputPort.id}
+                stage={outputStage}
+                port={outputPort}
+                produced={analysis.stages.get(outputStage.id)?.outputs.get(outputPort.id) ?? 0}
+                available={analysis.available.get(outputPort.id) ?? 0}
+                options={outputRecipes.get(`${outputPort.materialId}|${outputPort.unit}`) ?? []}
+                catalog={catalog}
+                catalogError={catalogError}
+                onAdd={addFromOutput}
+                onManualConnect={() => {
+                  setPending({ stageId: outputStage.id, portId: outputPort.id })
+                  setNotice('Select an input port to connect')
+                }}
+              />
+            ) : selectedStage ? (
               <StageInspector
                 stage={selectedStage}
                 catalog={catalog}
@@ -1208,143 +1282,200 @@ function App() {
   )
 }
 
-function OutputPathways({
-  project,
-  analysis,
-  recipes,
-  catalog,
-  catalogReady,
-  onAdd,
-}: {
-  project: Project
-  analysis: LineAnalysis
-  recipes: Map<string, CatalogRecipe[]>
-  catalog: Catalog | null
-  catalogReady: boolean
-  onAdd: (source: Stage, output: Port, recipe: CatalogRecipe | null) => void
-}) {
-  const outputs = project.stages.flatMap((stage) => stage.outputs.map((port) => ({ stage, port })))
-  return (
-    <section className="output-pathways" aria-label="Processing paths">
-      <div className="section-title">
-        <div>
-          <span className="eyebrow">BUILD THE NEXT STEP</span>
-          <h2>Processing paths</h2>
-        </div>
-        <small>Select a recipe to size and connect its machines automatically.</small>
-      </div>
-      {outputs.length ? (
-        <div className="pathway-list">
-          {outputs.map(({ stage, port }) => (
-            <OutputPathway
-              key={port.id}
-              stage={stage}
-              port={port}
-              produced={analysis.stages.get(stage.id)?.outputs.get(port.id) ?? 0}
-              available={analysis.available.get(port.id) ?? 0}
-              linked={project.links.some((link) => link.fromPort === port.id)}
-              options={recipes.get(`${port.materialId}|${port.unit}`) ?? []}
-              catalog={catalog}
-              catalogReady={catalogReady}
-              onAdd={onAdd}
-            />
-          ))}
-        </div>
-      ) : (
-        <p className="pathway-empty">Add an extractor or another source stage to explore processing paths.</p>
-      )}
-    </section>
-  )
-}
-
-function OutputPathway({
+function OutputRecipeInspector({
   stage,
   port,
   produced,
   available,
-  linked,
   options,
   catalog,
-  catalogReady,
+  catalogError,
   onAdd,
+  onManualConnect,
 }: {
   stage: Stage
   port: Port
   produced: number
   available: number
-  linked: boolean
   options: CatalogRecipe[]
   catalog: Catalog | null
-  catalogReady: boolean
-  onAdd: (source: Stage, output: Port, recipe: CatalogRecipe | null) => void
+  catalogError: string
+  onAdd: (stage: Stage, port: Port, recipe: CatalogRecipe | null) => void
+  onManualConnect: () => void
 }) {
+  const [query, setQuery] = useState('')
   const [selectedKey, setSelectedKey] = useState('')
-  const selected = options.find((recipe) => recipe.key === selectedKey) ?? options[0]
+  const matching = options.filter((recipe) =>
+    `${recipe.machine} ${recipe.outputs.map((output) => output.id).join(' ')}`
+      .toLowerCase()
+      .includes(query.toLowerCase()),
+  )
+  const selected = matching.find((recipe) => recipe.key === selectedKey) ?? matching[0]
   const input = selected?.inputs.find((stack) => catalog && inputAcceptsPort(catalog, stack, port))
   const tier = selected ? nextTier(stage.tier, selected.eut) : stage.tier
   const machines = selected && input ? machinesForInput(selected, input, available, tier) : null
-  const preview =
-    selected && input
-      ? selected.outputs
-          .slice(0, 3)
-          .map(
-            (output) =>
-              `${displayName(output.id)} ${formatPerMinute(
-                (available / input.amount) * output.amount * stackChance(output, selected, tier),
-                output.unit,
-              )}`,
-          )
-          .join(' · ')
-      : ''
-  const chance = outputChance(port, stage)
   return (
-    <div className="pathway-row">
-      <div className="pathway-material">
-        <strong>{port.name}</strong>
-        <span>
-          From {stage.name} · {chance < 1 ? `${Math.round(chance * 100)}% expected chance` : 'guaranteed'}
-        </span>
+    <div className="inspector-content output-inspector">
+      <div className="inspector-object-icon">
+        <Icon name="chevron" size={23} />
       </div>
-      <div className="pathway-rate">
+      <h2>Process {port.name}</h2>
+      <p className="inspector-intro">
+        From {stage.name} ·{' '}
+        {outputChance(port, stage) < 1
+          ? `${Math.round(outputChance(port, stage) * 100)}% expected chance`
+          : 'guaranteed'}
+      </p>
+      <div className="output-rate-card">
+        <span>Produced</span>
         <strong>{formatPerMinute(produced, port.unit)}</strong>
-        <span>{linked ? `${formatPerMinute(available, port.unit)} remaining` : 'available to process'}</span>
+        <span>Available for a new stage</span>
+        <strong>{formatPerMinute(available, port.unit)}</strong>
       </div>
-      <div className="pathway-choice">
-        {available <= 1e-9 ? (
-          <span className="pathway-muted">Fully allocated to linked stages</span>
-        ) : options.length ? (
-          <>
-            <select
-              aria-label={`Recipe for ${port.name}`}
-              value={selected?.key ?? ''}
-              onChange={(event) => setSelectedKey(event.target.value)}
-            >
-              {options.map((recipe) => (
-                <option key={recipe.key} value={recipe.key}>
-                  {displayName(recipe.machine)} →{' '}
-                  {recipe.outputs
-                    .slice(0, 2)
-                    .map((output) => displayName(output.id))
-                    .join(' + ')}
-                </option>
-              ))}
-            </select>
-            <span className="pathway-preview">
-              {machines} {displayName(selected.machine)} at {tier} · {preview}
-            </span>
-            <button onClick={() => onAdd(stage, port, selected)}>Add stage ↗</button>
-          </>
-        ) : (
-          <>
-            <span className="pathway-muted">
-              {catalogReady ? 'No matching calculable recipe in the game export' : 'Loading recipes...'}
-            </span>
-            <button className="pathway-manual" onClick={() => onAdd(stage, port, null)}>
-              Add custom stage ↗
-            </button>
-          </>
+      <label className="field">
+        <span>FIND A RECIPE · {options.length} MATCHES</span>
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Machine or output…"
+          aria-label="Search matching recipes"
+        />
+      </label>
+      <div className="recipe-options" role="listbox" aria-label={`Recipes for ${port.name}`}>
+        {matching.slice(0, 60).map((recipe) => (
+          <button
+            key={recipe.key}
+            role="option"
+            aria-selected={selected?.key === recipe.key}
+            className={selected?.key === recipe.key ? 'active' : ''}
+            onClick={() => setSelectedKey(recipe.key)}
+          >
+            <strong>{displayName(recipe.machine)}</strong>
+            <small>
+              {recipe.outputs
+                .slice(0, 2)
+                .map((output) => displayName(output.id))
+                .join(' + ') || 'No output'}
+            </small>
+          </button>
+        ))}
+        {matching.length > 60 && <p>Showing 60 recipes. Narrow the search to see more.</p>}
+        {matching.length === 0 && (
+          <p>
+            {catalog
+              ? 'No matching calculable recipe found.'
+              : catalogError
+                ? `Catalog unavailable: ${catalogError}`
+                : 'Loading recipes…'}
+          </p>
         )}
       </div>
+      {selected && input && (
+        <div className="recipe-preview">
+          <strong>
+            {machines ?? '—'} {displayName(selected.machine)} at {tier}
+          </strong>
+          <small>Estimated machines to process the available input</small>
+          {selected.outputs.slice(0, 4).map((output) => (
+            <div key={output.id}>
+              <span>{displayName(output.id)}</span>
+              <b>
+                {formatPerMinute(
+                  (available / input.amount) * output.amount * stackChance(output, selected, tier),
+                  output.unit,
+                )}
+              </b>
+            </div>
+          ))}
+        </div>
+      )}
+      <button
+        className="button primary output-add"
+        disabled={!selected || !input || available <= 1e-9}
+        onClick={() => selected && onAdd(stage, port, selected)}
+      >
+        Add selected recipe
+      </button>
+      <div className="output-secondary">
+        <button onClick={() => onAdd(stage, port, null)} disabled={available <= 1e-9}>
+          Add custom stage
+        </button>
+        <button onClick={onManualConnect}>Connect to existing input</button>
+      </div>
+    </div>
+  )
+}
+
+function TotalOutputView({
+  project,
+  totals,
+  finalCount,
+  warnings,
+}: {
+  project: Project
+  totals: ReturnType<typeof outputTotals>
+  finalCount: number
+  warnings: string[]
+}) {
+  const items = totals.filter((output) => output.unit === 'items')
+  const fluids = totals.filter((output) => output.unit === 'mB')
+  return (
+    <div className="totals-view" role="tabpanel" aria-label="Total output">
+      <div className="totals-heading">
+        <span className="eyebrow">AFTER LINKED STAGES</span>
+        <h2>Total output</h2>
+        <p>
+          Expected rates per minute across the whole line. Linked stages consume upstream output; unlinked
+          inputs are assumed available.
+        </p>
+      </div>
+      <div className="totals-summary">
+        <div>
+          <strong>{finalCount}</strong>
+          <span>NET PRODUCTS</span>
+        </div>
+        <div>
+          <strong>{project.stages.length}</strong>
+          <span>STAGES</span>
+        </div>
+        <div>
+          <strong>{project.stages.reduce((sum, stage) => sum + Math.max(1, stage.parallel), 0)}</strong>
+          <span>MACHINES</span>
+        </div>
+      </div>
+      {totals.length ? (
+        [items, fluids].map(
+          (group, index) =>
+            group.length > 0 && (
+              <section className="totals-group" key={index}>
+                <h3>{index === 0 ? 'Items' : 'Fluids'}</h3>
+                <div className="totals-table">
+                  <div className="totals-table-head">
+                    <span>OUTPUT</span>
+                    <span>PRODUCED / MIN</span>
+                    <span>USED IN LINE / MIN</span>
+                    <span>NET / MIN</span>
+                  </div>
+                  {group.map((output) => (
+                    <div className="totals-table-row" key={`${output.name}|${output.unit}`}>
+                      <strong>{output.name}</strong>
+                      <span>{formatPerMinute(output.produced, output.unit)}</span>
+                      <span>{formatPerMinute(output.allocated, output.unit)}</span>
+                      <b>{formatPerMinute(output.net, output.unit)}</b>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ),
+        )
+      ) : (
+        <p className="pathway-empty">Add a source stage to calculate its outputs.</p>
+      )}
+      {warnings.map((warning) => (
+        <p className="calculation-note" key={warning}>
+          {warning}
+        </p>
+      ))}
     </div>
   )
 }

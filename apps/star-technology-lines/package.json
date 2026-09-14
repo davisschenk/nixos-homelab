@@ -9,7 +9,7 @@
     "preview": "vite preview --host 0.0.0.0",
     "catalog:build": "node scripts/build-catalog.mjs",
     "catalog:check": "node scripts/check-catalog.mjs",
-    "test": "node --test scripts/**/*.test.mjs",
+    "test": "node --test scripts/*.test.mjs scripts/**/*.test.mjs",
     "format": "prettier --write src scripts index.html package.json tsconfig.json README.md",
     "format:check": "prettier --check src scripts index.html package.json tsconfig.json README.md"
   },
