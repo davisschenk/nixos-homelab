@@ -245,6 +245,7 @@ function App() {
       viewportRef.current.scrollTop = 170
     }
     setSelectedOutput(null)
+    setPending(null)
   }, [workspace.activeId])
 
   const updateProject = (change: (current: Project) => Project) => {
@@ -463,6 +464,7 @@ function App() {
     setSelectedOutput({ stageId: stage.id, portId: port.id })
     setSelectedId(null)
     setSelectedLinkId(null)
+    setPending(null)
     setView('canvas')
     if (window.innerWidth <= 900)
       requestAnimationFrame(() =>
