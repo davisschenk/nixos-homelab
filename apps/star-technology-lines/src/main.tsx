@@ -1,9 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
   createProject,
   createStage,
-  formatRate,
   isProject,
   loadWorkspace,
   newId,
@@ -16,6 +15,9 @@ import {
 import {
   displayName,
   displayStack,
+  inputAcceptsPort,
+  inputMaterials,
+  recipeIsCalculable,
   recipeIsReady,
   searchRecipes,
   sourceLink,
@@ -23,6 +25,19 @@ import {
   type Catalog,
   type CatalogRecipe,
 } from './catalog'
+import {
+  analyzeLine,
+  formatPerMinute,
+  machinesForInput,
+  minimumTier,
+  netOutputs,
+  outputChance,
+  stageTiming,
+  stackChance,
+  VOLTAGE_TIERS,
+  type LineAnalysis,
+  type StageAnalysis,
+} from './planning'
 import './styles.css'
 
 const CANVAS_WIDTH = 2300
@@ -30,6 +45,25 @@ const CANVAS_HEIGHT = 1500
 const NODE_WIDTH = 300
 const PORT_OFFSET = 150
 const PORT_STEP = 36
+
+const SOURCE_MACHINES = new Set(['void_excavation', 'mechanical_sieve', 'large_sieve', 'rock_filtrator'])
+const isSourceMachine = (stage: Stage) =>
+  stage.recipeRef != null &&
+  [...SOURCE_MACHINES].some(
+    (machine) =>
+      stage.recipeRef?.key.includes(`/${machine}/`) || stage.recipeRef?.key.includes(`:${machine}:`),
+  )
+const sourceMachineName = (machine: string) =>
+  machine === 'void_excavation' ? 'Void Ore Extractor' : displayName(machine)
+const sourceTitle = (recipe: CatalogRecipe) =>
+  `${sourceMachineName(recipe.machine)} · ${displayName(recipe.gameId?.split('/').pop() ?? recipe.machine)}`
+const isRawOre = (port: Port) => port.unit === 'items' && /:raw_[^/]+$/.test(port.materialId ?? '')
+
+const nextTier = (sourceTier: string, recipeEut: number | null) => {
+  const source = VOLTAGE_TIERS.indexOf(sourceTier)
+  const minimum = VOLTAGE_TIERS.indexOf(minimumTier(recipeEut))
+  return VOLTAGE_TIERS[Math.max(1, source, minimum)]
+}
 
 type Pending = { stageId: string; portId: string } | null
 type Drag = { id: string; startX: number; startY: number; nodeX: number; nodeY: number } | null
@@ -119,12 +153,62 @@ function App() {
   const [catalogOpen, setCatalogOpen] = useState(false)
   const [catalogQuery, setCatalogQuery] = useState('')
   const [includePartial, setIncludePartial] = useState(false)
+  const [sourceKey, setSourceKey] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const viewportRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<Drag>(null)
   const project = workspace.projects.find((p) => p.id === workspace.activeId) ?? workspace.projects[0]
   const selectedStage = project.stages.find((s) => s.id === selectedId)
   const selectedLink = project.links.find((l) => l.id === selectedLinkId)
+  const analysis = analyzeLine(project)
+  const finalOutputs = netOutputs(project, analysis)
+  const sourceRecipes = useMemo(
+    () =>
+      catalog?.recipes.filter(
+        (recipe) => SOURCE_MACHINES.has(recipe.machine) && recipeIsCalculable(recipe),
+      ) ?? [],
+    [catalog],
+  )
+  const sourceRecipe =
+    sourceRecipes.find((recipe) => recipe.key === sourceKey) ??
+    sourceRecipes.find((recipe) => recipe.machine === 'void_excavation') ??
+    sourceRecipes[0]
+  const sourceStages = project.stages.filter(isSourceMachine)
+  const outputRecipes = useMemo(() => {
+    const index = new Map<string, CatalogRecipe[]>()
+    if (!catalog) return index
+    for (const recipe of catalog.recipes) {
+      if (!recipeIsCalculable(recipe)) continue
+      for (const input of recipe.inputs) {
+        for (const material of inputMaterials(catalog, input)) {
+          const key = `${material}|${input.unit}`
+          const list = index.get(key) ?? []
+          list.push(recipe)
+          index.set(key, list)
+        }
+      }
+    }
+    for (const [key, list] of index)
+      list.sort(
+        (a, b) =>
+          (/:raw_[^/]+\|items$/.test(key)
+            ? Number(b.machine === 'macerator') - Number(a.machine === 'macerator')
+            : 0) ||
+          a.inputs.length - b.inputs.length ||
+          (a.durationTicks ?? Infinity) - (b.durationTicks ?? Infinity) ||
+          a.machine.localeCompare(b.machine),
+      )
+    return index
+  }, [catalog])
+  const recommendedOrePaths = sourceStages.flatMap((stage) =>
+    stage.outputs.flatMap((port) => {
+      if (!isRawOre(port) || (analysis.available.get(port.id) ?? 0) <= 1e-9) return []
+      const recipe = outputRecipes
+        .get(`${port.materialId}|${port.unit}`)
+        ?.find((item) => item.machine === 'macerator')
+      return recipe ? [{ stage, port, recipe }] : []
+    }),
+  )
 
   useEffect(() => {
     localStorage.setItem('starline-workspace-v1', JSON.stringify(workspace))
@@ -205,6 +289,94 @@ function App() {
     setNotice(recipeIsReady(recipe) ? 'Recipe added to line' : 'Added with fields to review against source')
   }
 
+  const makeSource = (x: number, y: number) => {
+    if (!sourceRecipe) return null
+    return {
+      ...stageFromRecipe(sourceRecipe, x, y),
+      name: sourceTitle(sourceRecipe),
+      machine: sourceMachineName(sourceRecipe.machine),
+      tier: minimumTier(sourceRecipe.eut),
+      parallel: 1,
+    }
+  }
+
+  const startSourceLine = () => {
+    const source = makeSource(130, 220)
+    if (!source) return
+    const next = createProject(source.name)
+    next.stages = [source]
+    setWorkspace((current) => ({ projects: [...current.projects, next], activeId: next.id }))
+    setSelectedId(source.id)
+    setSelectedLinkId(null)
+    setPending(null)
+  }
+
+  const addSourceHere = () => {
+    const source = makeSource(130, Math.min(220 + sourceStages.length * 500, CANVAS_HEIGHT - 450))
+    if (!source) return
+    updateProject((current) => ({ ...current, stages: [...current.stages, source] }))
+    setSelectedId(source.id)
+    setSelectedLinkId(null)
+  }
+
+  const addFromOutput = (source: Stage, output: Port, recipe: CatalogRecipe | null) => {
+    const incomingRate = analysis.available.get(output.id) ?? 0
+    if (incomingRate <= 0) {
+      setNotice('No unallocated output is available for another stage')
+      return
+    }
+    const input = recipe?.inputs.find((stack) => catalog && inputAcceptsPort(catalog, stack, output))
+    if (recipe && !input) return
+    const tier = recipe ? nextTier(source.tier, recipe.eut) : source.tier
+    const machines = recipe && input ? machinesForInput(recipe, input, incomingRate, tier) : 1
+    const x = Math.min(source.x + 410, CANVAS_WIDTH - NODE_WIDTH - 20)
+    const y = Math.min(source.y + 22 + source.outputs.indexOf(output) * 130, CANVAS_HEIGHT - 350)
+    const stage: Stage = recipe
+      ? { ...stageFromRecipe(recipe, x, y), tier, parallel: machines ?? 1 }
+      : {
+          ...createStage(x, y),
+          name: `Process ${output.name}`,
+          machine: 'Choose a machine',
+          tier,
+          duration: null,
+          eut: null,
+          inputs: [
+            {
+              id: newId(),
+              name: output.name,
+              amount: 1,
+              unit: output.unit,
+              materialId: output.materialId,
+            },
+          ],
+          outputs: [],
+          notes: 'Add the in-game recipe values, then set the machine count to match the incoming rate.',
+        }
+    const target = recipe
+      ? stage.inputs[recipe.inputs.indexOf(input!)]
+      : stage.inputs.find((port) => port.materialId === output.materialId && port.unit === output.unit)
+    if (!target) return
+    const link: Link = {
+      id: newId(),
+      fromStage: source.id,
+      fromPort: output.id,
+      toStage: stage.id,
+      toPort: target.id,
+    }
+    updateProject((current) => ({
+      ...current,
+      stages: [...current.stages, stage],
+      links: [...current.links, link],
+    }))
+    setSelectedId(stage.id)
+    setSelectedLinkId(null)
+    setNotice(
+      recipe
+        ? `Added ${stage.machine} · ${stage.parallel} machine${stage.parallel === 1 ? '' : 's'}`
+        : 'Custom stage linked; enter its recipe values',
+    )
+  }
+
   const removeStage = (id: string) => {
     updateProject((p) => ({
       ...p,
@@ -254,9 +426,13 @@ function App() {
     if (
       sourcePort.materialId &&
       port.materialId &&
-      !sourcePort.materialId.startsWith('#') &&
-      !port.materialId.startsWith('#') &&
-      sourcePort.materialId !== port.materialId
+      sourcePort.materialId !== port.materialId &&
+      (!catalog ||
+        !inputAcceptsPort(
+          catalog,
+          { id: port.materialId, amount: port.amount, unit: port.unit, chance: null },
+          sourcePort,
+        ))
     ) {
       setNotice('These ports contain different materials')
       return
@@ -377,7 +553,7 @@ function App() {
   }
 
   const totalEu = project.stages.reduce(
-    (sum, stage) => sum + Math.max(0, stage.eut ?? 0) * Math.max(1, stage.parallel),
+    (sum, stage) => sum + Math.max(0, stageTiming(stage).eut ?? 0) * Math.max(1, stage.parallel),
     0,
   )
   const linkSource = selectedLink && project.stages.find((s) => s.id === selectedLink.fromStage)
@@ -482,6 +658,14 @@ function App() {
             <p>{project.description || 'Map machines, materials, and throughput in one place.'}</p>
           </div>
           <div className="header-actions">
+            <button
+              className="button primary"
+              onClick={startSourceLine}
+              disabled={!sourceRecipe}
+              aria-label="New source line"
+            >
+              <Icon name="bolt" size={16} /> New source line
+            </button>
             <button className="button subtle" onClick={() => setCatalogOpen(true)}>
               <Icon name="grid" size={16} /> Recipe catalog
             </button>
@@ -520,8 +704,157 @@ function App() {
               <small>CONFIGURED POWER</small>
             </div>
           </div>
-          <div className="stat-tip">Rates use each stage’s duration and parallel count.</div>
+          <div className="stat-tip">Rates include machine tier, chance, and available linked inputs.</div>
         </div>
+        {sourceStages.length === 0 ? (
+          <section className="extractor-banner">
+            <div>
+              <span className="eyebrow">START FROM A SOURCE</span>
+              <h2>Choose your resource line</h2>
+              <p>
+                Start with void extraction, sieving, or geode filtration. Set voltage and machine count, then
+                process each output.
+              </p>
+            </div>
+            <div className="source-picker">
+              <select
+                aria-label="Source recipe"
+                value={sourceRecipe?.key ?? ''}
+                onChange={(event) => setSourceKey(event.target.value)}
+              >
+                {sourceRecipes.map((recipe) => (
+                  <option key={recipe.key} value={recipe.key}>
+                    {sourceTitle(recipe)}
+                  </option>
+                ))}
+              </select>
+              <button className="button primary" onClick={addSourceHere} disabled={!sourceRecipe}>
+                <Icon name="plus" size={16} /> Add to this line
+              </button>
+            </div>
+          </section>
+        ) : (
+          <section className="extractor-config" aria-label="Source machines">
+            <div className="section-title">
+              <div>
+                <span className="eyebrow">SOURCE MACHINES</span>
+                <h2>Resource generation</h2>
+              </div>
+              <div className="source-picker">
+                {recommendedOrePaths.length > 0 && (
+                  <button
+                    className="button subtle"
+                    onClick={() =>
+                      recommendedOrePaths.forEach(({ stage, port, recipe }) =>
+                        addFromOutput(stage, port, recipe),
+                      )
+                    }
+                  >
+                    <Icon name="bolt" size={15} /> Macerate {recommendedOrePaths.length} raw ores
+                  </button>
+                )}
+                <select
+                  aria-label="Additional source recipe"
+                  value={sourceRecipe?.key ?? ''}
+                  onChange={(event) => setSourceKey(event.target.value)}
+                >
+                  {sourceRecipes.map((recipe) => (
+                    <option key={recipe.key} value={recipe.key}>
+                      {sourceTitle(recipe)}
+                    </option>
+                  ))}
+                </select>
+                <button className="button subtle" onClick={addSourceHere} disabled={!sourceRecipe}>
+                  <Icon name="plus" size={15} /> Add source
+                </button>
+              </div>
+            </div>
+            <div className="extractor-list">
+              {sourceStages.map((source) => {
+                const timing = analysis.stages.get(source.id)?.timing
+                return (
+                  <div className="extractor-controls" key={source.id}>
+                    <strong>{source.name}</strong>
+                    <label>
+                      Voltage tier
+                      <select
+                        value={source.tier}
+                        onChange={(event) =>
+                          updateStage(source.id, (stage) => ({ ...stage, tier: event.target.value }))
+                        }
+                      >
+                        {VOLTAGE_TIERS.slice(1).map((tier) => (
+                          <option key={tier} value={tier}>
+                            {tier}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Machines
+                      <input
+                        type="number"
+                        min="1"
+                        max="100000"
+                        step="1"
+                        value={source.parallel}
+                        onChange={(event) =>
+                          updateStage(source.id, (stage) => ({
+                            ...stage,
+                            parallel: Math.max(1, Math.floor(Number(event.target.value) || 1)),
+                          }))
+                        }
+                      />
+                    </label>
+                    <span className="extractor-speed">
+                      {timing?.durationSeconds == null
+                        ? 'Rate unavailable'
+                        : `${timing.durationSeconds}s/cycle · ${timing.overclocks} overclocks`}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+            <p className="calculation-note">
+              Chance-based amounts are expected averages after tier bonuses. Unlinked inputs, such as drilling
+              fluid or gravel, are assumed available.
+            </p>
+          </section>
+        )}
+        <OutputPathways
+          project={project}
+          analysis={analysis}
+          recipes={outputRecipes}
+          catalog={catalog}
+          catalogReady={catalog !== null}
+          onAdd={addFromOutput}
+        />
+        <section className="net-outputs" aria-label="Total output">
+          <div className="section-title">
+            <div>
+              <span className="eyebrow">AFTER LINKED STAGES</span>
+              <h2>Total output</h2>
+            </div>
+            <small>Expected rates per minute</small>
+          </div>
+          {finalOutputs.length ? (
+            <div className="net-output-list">
+              {finalOutputs.map((output) => (
+                <div key={`${output.name}|${output.unit}`}>
+                  <span>{output.name}</span>
+                  <strong>{formatPerMinute(output.rate, output.unit)}</strong>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="pathway-empty">Add a source stage to calculate its outputs.</p>
+          )}
+          {analysis.warnings.map((warning) => (
+            <p className="calculation-note" key={warning}>
+              {warning}
+            </p>
+          ))}
+        </section>
         <section className="workspace-body">
           <div className="canvas-panel">
             <div className="canvas-toolbar">
@@ -636,10 +969,13 @@ function App() {
                       <div className="node-meta">
                         <span>
                           <Icon name="clock" size={13} />{' '}
-                          {stage.duration == null ? '?' : `${stage.duration}s`}
+                          {analysis.stages.get(stage.id)?.timing.durationSeconds == null
+                            ? '?'
+                            : `${analysis.stages.get(stage.id)?.timing.durationSeconds}s`}
                         </span>
                         <span>
-                          <Icon name="bolt" size={13} /> {stage.eut == null ? '?' : stage.eut} EU/t
+                          <Icon name="bolt" size={13} /> {analysis.stages.get(stage.id)?.timing.eut ?? '?'}{' '}
+                          EU/t
                         </span>
                         <span>×{stage.parallel}</span>
                       </div>
@@ -701,7 +1037,12 @@ function App() {
                       <div className="node-footer">
                         <span>
                           <span className="tiny-spark">✦</span>{' '}
-                          {stage.outputs[0] ? formatRate(stage.outputs[0], stage) : 'No output'}
+                          {stage.outputs[0]
+                            ? formatPerMinute(
+                                analysis.stages.get(stage.id)?.outputs.get(stage.outputs[0].id) ?? 0,
+                                stage.outputs[0].unit,
+                              )
+                            : 'No output'}
                         </span>
                         <Icon name="chevron" size={14} />
                       </div>
@@ -740,12 +1081,24 @@ function App() {
               <StageInspector
                 stage={selectedStage}
                 catalog={catalog}
+                analysis={analysis.stages.get(selectedStage.id)}
                 update={(change) =>
                   updateStage(selectedStage.id, (s) => {
                     const next = change(s)
                     return {
                       ...next,
-                      recipeRef: next.recipeRef ? { ...next.recipeRef, modified: true } : undefined,
+                      recipeRef: next.recipeRef
+                        ? {
+                            ...next.recipeRef,
+                            modified:
+                              next.recipeRef.modified ||
+                              next.machine !== s.machine ||
+                              next.duration !== s.duration ||
+                              next.eut !== s.eut ||
+                              next.inputs !== s.inputs ||
+                              next.outputs !== s.outputs,
+                          }
+                        : undefined,
                     }
                   })
                 }
@@ -855,6 +1208,147 @@ function App() {
   )
 }
 
+function OutputPathways({
+  project,
+  analysis,
+  recipes,
+  catalog,
+  catalogReady,
+  onAdd,
+}: {
+  project: Project
+  analysis: LineAnalysis
+  recipes: Map<string, CatalogRecipe[]>
+  catalog: Catalog | null
+  catalogReady: boolean
+  onAdd: (source: Stage, output: Port, recipe: CatalogRecipe | null) => void
+}) {
+  const outputs = project.stages.flatMap((stage) => stage.outputs.map((port) => ({ stage, port })))
+  return (
+    <section className="output-pathways" aria-label="Processing paths">
+      <div className="section-title">
+        <div>
+          <span className="eyebrow">BUILD THE NEXT STEP</span>
+          <h2>Processing paths</h2>
+        </div>
+        <small>Select a recipe to size and connect its machines automatically.</small>
+      </div>
+      {outputs.length ? (
+        <div className="pathway-list">
+          {outputs.map(({ stage, port }) => (
+            <OutputPathway
+              key={port.id}
+              stage={stage}
+              port={port}
+              produced={analysis.stages.get(stage.id)?.outputs.get(port.id) ?? 0}
+              available={analysis.available.get(port.id) ?? 0}
+              linked={project.links.some((link) => link.fromPort === port.id)}
+              options={recipes.get(`${port.materialId}|${port.unit}`) ?? []}
+              catalog={catalog}
+              catalogReady={catalogReady}
+              onAdd={onAdd}
+            />
+          ))}
+        </div>
+      ) : (
+        <p className="pathway-empty">Add an extractor or another source stage to explore processing paths.</p>
+      )}
+    </section>
+  )
+}
+
+function OutputPathway({
+  stage,
+  port,
+  produced,
+  available,
+  linked,
+  options,
+  catalog,
+  catalogReady,
+  onAdd,
+}: {
+  stage: Stage
+  port: Port
+  produced: number
+  available: number
+  linked: boolean
+  options: CatalogRecipe[]
+  catalog: Catalog | null
+  catalogReady: boolean
+  onAdd: (source: Stage, output: Port, recipe: CatalogRecipe | null) => void
+}) {
+  const [selectedKey, setSelectedKey] = useState('')
+  const selected = options.find((recipe) => recipe.key === selectedKey) ?? options[0]
+  const input = selected?.inputs.find((stack) => catalog && inputAcceptsPort(catalog, stack, port))
+  const tier = selected ? nextTier(stage.tier, selected.eut) : stage.tier
+  const machines = selected && input ? machinesForInput(selected, input, available, tier) : null
+  const preview =
+    selected && input
+      ? selected.outputs
+          .slice(0, 3)
+          .map(
+            (output) =>
+              `${displayName(output.id)} ${formatPerMinute(
+                (available / input.amount) * output.amount * stackChance(output, selected, tier),
+                output.unit,
+              )}`,
+          )
+          .join(' · ')
+      : ''
+  const chance = outputChance(port, stage)
+  return (
+    <div className="pathway-row">
+      <div className="pathway-material">
+        <strong>{port.name}</strong>
+        <span>
+          From {stage.name} · {chance < 1 ? `${Math.round(chance * 100)}% expected chance` : 'guaranteed'}
+        </span>
+      </div>
+      <div className="pathway-rate">
+        <strong>{formatPerMinute(produced, port.unit)}</strong>
+        <span>{linked ? `${formatPerMinute(available, port.unit)} remaining` : 'available to process'}</span>
+      </div>
+      <div className="pathway-choice">
+        {available <= 1e-9 ? (
+          <span className="pathway-muted">Fully allocated to linked stages</span>
+        ) : options.length ? (
+          <>
+            <select
+              aria-label={`Recipe for ${port.name}`}
+              value={selected?.key ?? ''}
+              onChange={(event) => setSelectedKey(event.target.value)}
+            >
+              {options.map((recipe) => (
+                <option key={recipe.key} value={recipe.key}>
+                  {displayName(recipe.machine)} →{' '}
+                  {recipe.outputs
+                    .slice(0, 2)
+                    .map((output) => displayName(output.id))
+                    .join(' + ')}
+                </option>
+              ))}
+            </select>
+            <span className="pathway-preview">
+              {machines} {displayName(selected.machine)} at {tier} · {preview}
+            </span>
+            <button onClick={() => onAdd(stage, port, selected)}>Add stage ↗</button>
+          </>
+        ) : (
+          <>
+            <span className="pathway-muted">
+              {catalogReady ? 'No matching calculable recipe in the game export' : 'Loading recipes...'}
+            </span>
+            <button className="pathway-manual" onClick={() => onAdd(stage, port, null)}>
+              Add custom stage ↗
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function CatalogDrawer({
   catalog,
   error,
@@ -888,7 +1382,7 @@ function CatalogDrawer({
           <div>
             <span className="eyebrow">STAR TECHNOLOGY SOURCE</span>
             <h2>Recipe catalog</h2>
-            <p>Search pack-authored recipes and add them to your line.</p>
+            <p>Search exported in-game recipes and add them to your line.</p>
           </div>
           <button className="catalog-close" onClick={onClose} aria-label="Close catalog">
             <Icon name="close" size={18} />
@@ -915,8 +1409,8 @@ function CatalogDrawer({
           {catalog ? (
             <>
               <strong>{completeCount.toLocaleString()}</strong> ready recipes <span>·</span>{' '}
-              {catalog.recipes.length.toLocaleString()} source declarations <span>·</span>{' '}
-              {catalog.sources.length} source{catalog.sources.length === 1 ? '' : 's'}
+              {catalog.recipes.length.toLocaleString()} recipes <span>·</span> {catalog.sources.length} source
+              {catalog.sources.length === 1 ? '' : 's'}
             </>
           ) : error ? (
             `Catalog unavailable: ${error}`
@@ -949,9 +1443,9 @@ function CatalogDrawer({
                   {recipe.outputs.length ? recipe.outputs.map(displayStack).join(' + ') : 'No static outputs'}
                 </p>
               </div>
-              {!recipeIsReady(recipe) && (
+              {!recipeIsCalculable(recipe) && (
                 <p className="recipe-warning">
-                  Review chance, timing, and unresolved fields before planning throughput
+                  Review timing and unresolved fields before planning throughput
                 </p>
               )}
               <div className="recipe-card-actions">
@@ -981,9 +1475,13 @@ function CatalogDrawer({
           {catalog?.sources.map((source) => (
             <div key={source.id}>
               {source.name} ·{' '}
-              <a href={`${source.url}/tree/${source.commit}`} target="_blank" rel="noreferrer">
-                {source.commit.slice(0, 8)}
-              </a>
+              {source.url && source.commit ? (
+                <a href={`${source.url}/tree/${source.commit}`} target="_blank" rel="noreferrer">
+                  {source.commit.slice(0, 8)}
+                </a>
+              ) : (
+                <span>Local instance</span>
+              )}
               <br />
               <span>{source.scope}</span>
             </div>
@@ -997,6 +1495,7 @@ function CatalogDrawer({
 function StageInspector({
   stage,
   catalog,
+  analysis,
   update,
   duplicate,
   remove,
@@ -1004,6 +1503,7 @@ function StageInspector({
 }: {
   stage: Stage
   catalog: Catalog | null
+  analysis?: StageAnalysis
   update: (change: (stage: Stage) => Stage) => void
   duplicate: () => void
   remove: () => void
@@ -1079,7 +1579,14 @@ function StageInspector({
       <div className="field-grid">
         <label className="field">
           <span>TIER</span>
-          <input value={stage.tier} onChange={(event) => set('tier', event.target.value)} />
+          <select value={stage.tier} onChange={(event) => set('tier', event.target.value)}>
+            {!VOLTAGE_TIERS.includes(stage.tier) && <option value={stage.tier}>{stage.tier}</option>}
+            {VOLTAGE_TIERS.slice(1).map((tier) => (
+              <option key={tier} value={tier}>
+                {tier}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="field">
           <span>PARALLEL</span>
@@ -1094,7 +1601,7 @@ function StageInspector({
       </div>
       <div className="field-grid">
         <label className="field">
-          <span>DURATION · SEC</span>
+          <span>{stage.recipeRef ? 'SOURCE DURATION · SEC' : 'DURATION · SEC'}</span>
           <input
             type="number"
             min="0.1"
@@ -1109,7 +1616,7 @@ function StageInspector({
           />
         </label>
         <label className="field">
-          <span>POWER · EU/T</span>
+          <span>{stage.recipeRef ? 'SOURCE POWER · EU/T' : 'POWER · EU/T'}</span>
           <input
             type="number"
             min="0"
@@ -1149,9 +1656,19 @@ function StageInspector({
         />
       </label>
       <div className="throughput-card">
-        <small>FIRST OUTPUT RATE</small>
-        <strong>{stage.outputs[0] ? formatRate(stage.outputs[0], stage) : 'Add an output'}</strong>
-        <span>Based on duration and parallel count</span>
+        <small>FIRST OUTPUT · EXPECTED RATE</small>
+        <strong>
+          {stage.outputs[0]
+            ? formatPerMinute(analysis?.outputs.get(stage.outputs[0].id) ?? 0, stage.outputs[0].unit)
+            : 'Add an output'}
+        </strong>
+        <span>
+          {analysis?.timing.durationSeconds == null
+            ? 'Set a valid duration and voltage tier'
+            : `${analysis.timing.durationSeconds}s cycle · ${Math.round(
+                (analysis.runsPerMinute / Math.max(analysis.capacityPerMinute, 1e-9)) * 100,
+              )}% utilized`}
+        </span>
       </div>
       <div className="inspector-actions">
         <button onClick={duplicate}>

@@ -6,6 +6,8 @@ export type Port = {
   amount: number
   unit: Unit
   materialId?: string
+  chance?: number
+  chanceBoost?: number
 }
 
 export type Stage = {
@@ -157,7 +159,11 @@ const isPort = (value: unknown): value is Port => {
     typeof port.amount === 'number' &&
     Number.isFinite(port.amount) &&
     (port.unit === 'items' || port.unit === 'mB') &&
-    (port.materialId === undefined || typeof port.materialId === 'string')
+    (port.materialId === undefined || typeof port.materialId === 'string') &&
+    (port.chance === undefined ||
+      (typeof port.chance === 'number' && port.chance >= 0 && port.chance <= 1)) &&
+    (port.chanceBoost === undefined ||
+      (typeof port.chanceBoost === 'number' && Number.isFinite(port.chanceBoost)))
   )
 }
 

@@ -142,7 +142,7 @@ test('includes only selected source branches and preserves NBT and chance review
               .duration(100).EUt(30)
           } else {
             event.recipes.gtceu.autoclave(global.id(mat.name))
-              .itemInputs('gtceu:dust').chancedOutput('gtceu:fiber', mat.chance, 0)
+              .itemInputs('gtceu:dust').chancedOutput('gtceu:fiber', mat.chance, 1000)
               .duration(100).EUt(30)
           }
         })
@@ -155,6 +155,7 @@ test('includes only selected source branches and preserves NBT and chance review
     const result = await importKubeJs(root, 'test')
     assert.equal(result.recipes.length, 3)
     assert.equal(result.recipes.find((recipe) => recipe.gameId === 'start:a').outputs[0].chance, 0.5)
+    assert.equal(result.recipes.find((recipe) => recipe.gameId === 'start:a').outputs[0].chanceBoost, 0.1)
     assert.equal(result.recipes.find((recipe) => recipe.gameId === 'start:b').outputs[0].amount, 1)
     const nbt = result.recipes.find((recipe) => recipe.gameId === 'start:nbt')
     assert.equal(nbt.outputs[0].nbt, '{Custom:1b}')

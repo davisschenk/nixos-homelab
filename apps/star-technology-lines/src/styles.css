@@ -1709,3 +1709,215 @@ svg {
   margin: 6px 0 0 15px;
   overflow-wrap: anywhere;
 }
+.extractor-banner,
+.extractor-config,
+.output-pathways,
+.net-outputs {
+  margin: 0 31px 18px;
+  padding: 19px 21px;
+  border: 1px solid #2e3c4e;
+  border-radius: 9px;
+  background: #141e2b;
+}
+.extractor-banner,
+.section-title,
+.source-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.extractor-banner {
+  border-color: #645085;
+  background: linear-gradient(110deg, #251e36, #172331);
+}
+.extractor-banner h2,
+.section-title h2 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 18px;
+  margin: 5px 0 0;
+}
+.extractor-banner p,
+.calculation-note,
+.pathway-empty {
+  color: #9aabc1;
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 7px 0 0;
+}
+.section-title small {
+  color: #91a1b5;
+  font-size: 11px;
+}
+.source-picker select,
+.extractor-controls select,
+.extractor-controls input,
+.pathway-choice select {
+  min-height: 36px;
+  border: 1px solid #42536a;
+  border-radius: 6px;
+  background: #101a27;
+  color: #e6edf5;
+  padding: 0 10px;
+  font-size: 11px;
+}
+.source-picker select {
+  max-width: 270px;
+}
+.extractor-list,
+.pathway-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 15px;
+}
+.extractor-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 13px;
+  padding: 10px 12px;
+  border: 1px solid #344459;
+  border-radius: 7px;
+  background: #1a2737;
+}
+.extractor-controls > strong {
+  min-width: 190px;
+  flex: 1;
+  font-size: 12px;
+}
+.extractor-controls label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #a7b6c8;
+  font-size: 10px;
+}
+.extractor-controls select,
+.extractor-controls input {
+  width: 85px;
+}
+.extractor-speed {
+  min-width: 150px;
+  color: #bca0ed;
+  font-size: 11px;
+  text-align: right;
+}
+.pathway-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(150px, 190px) minmax(260px, 2fr);
+  align-items: center;
+  gap: 16px;
+  padding: 11px 12px;
+  border: 1px solid #334257;
+  border-radius: 7px;
+  background: #192636;
+}
+.pathway-material strong,
+.pathway-rate strong {
+  display: block;
+  font-size: 12px;
+}
+.pathway-material span,
+.pathway-rate span,
+.pathway-preview,
+.pathway-muted {
+  display: block;
+  color: #90a2b8;
+  font-size: 10px;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+.pathway-choice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 5px 10px;
+}
+.pathway-choice select {
+  width: 100%;
+  min-width: 0;
+}
+.pathway-preview {
+  grid-column: 1;
+  margin: 0;
+}
+.pathway-choice button {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  padding: 8px 10px;
+  border: 1px solid #ab8ae0;
+  border-radius: 5px;
+  background: #a887dc;
+  color: #1a1028;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.pathway-choice .pathway-manual {
+  background: #25354b;
+  color: #c6d5e6;
+  border-color: #465c74;
+}
+.net-output-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+.net-output-list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #344459;
+  border-radius: 6px;
+  background: #1b2939;
+  font-size: 11px;
+}
+.net-output-list strong {
+  color: #bda5ea;
+  white-space: nowrap;
+}
+@media (max-width: 1080px) {
+  .pathway-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .pathway-choice {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 640px) {
+  .extractor-banner,
+  .extractor-config,
+  .output-pathways,
+  .net-outputs {
+    margin: 0 12px 12px;
+    padding: 15px;
+  }
+  .extractor-banner,
+  .section-title,
+  .source-picker {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .source-picker select {
+    max-width: none;
+    width: 100%;
+  }
+  .extractor-controls > strong {
+    flex-basis: 100%;
+  }
+  .extractor-speed {
+    text-align: left;
+  }
+  .pathway-row {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+  .pathway-choice {
+    grid-column: 1;
+  }
+  .pathway-choice button {
+    white-space: normal;
+  }
+}

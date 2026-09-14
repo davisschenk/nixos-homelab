@@ -14,25 +14,28 @@ const ready = catalog.recipes.filter(
     recipe.durationTicks != null &&
     recipe.eut != null &&
     recipe.inputs.every((stack) => stack.chance == null || stack.chance >= 1) &&
-    recipe.outputs.every((stack) => stack.chance == null || stack.chance >= 1) &&
     recipe.unresolved.length === 0,
 ).length
-const peek = catalog.recipes.find(
-  (recipe) => recipe.gameId === 'start:peek_process' && recipe.machine === 'large_chemical_reactor',
-)
+const recipe = (id) => catalog.recipes.find((entry) => entry.gameId === id)
+const mining = recipe('start:void_excavation/mining')
+const gold = recipe('gtceu:macerator/macerate_raw_gold_ore_to_crushed_ore')
+const sieve = recipe('start:mechanical_sieve/gravel_sieving')
+const geodes = recipe('start:rock_filtrator/lv_geodes')
 if (
-  !peek ||
-  peek.durationTicks !== 250 ||
-  peek.eut !== 30720 ||
-  !peek.outputs.some((stack) => stack.id === 'gtceu:polyether_ether_ketone' && stack.amount === 2448)
-) {
-  throw new Error('Known PEEK recipe was not extracted correctly')
-}
+  mining?.outputs.find((stack) => stack.id === 'minecraft:raw_gold')?.chance !== 0.4 ||
+  mining.outputs.find((stack) => stack.id === 'minecraft:raw_gold')?.chanceBoost !== 0.075 ||
+  gold?.inputs[0]?.id !== 'minecraft:raw_gold' ||
+  gold.outputs[0]?.id !== 'gtceu:crushed_gold_ore' ||
+  sieve?.catalysts[0]?.id !== 'exnihilosequentia:string_mesh' ||
+  geodes?.circuit !== 0 ||
+  geodes.outputs[0]?.chanceBoost !== 0.075
+)
+  throw new Error('Known resource processing recipes were not extracted correctly')
 if (
   catalog.packVersion !== '1.20.1-THETA-1-HOTFIX-3' ||
   catalog.packMode !== 'default' ||
   catalog.sources[0]?.commit !== '26135f37ebad21800d7ffe61f29189d6f15254ab' ||
-  ready < 2000
+  ready < 30000
 ) {
   throw new Error('Catalog provenance or ready recipe coverage is incomplete')
 }

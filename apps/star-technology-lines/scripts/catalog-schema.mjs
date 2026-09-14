@@ -9,6 +9,16 @@ export function validateCatalog(catalog) {
   ) {
     throw new Error('Unsupported recipe catalog')
   }
+  if (
+    catalog.tags !== undefined &&
+    (typeof catalog.tags !== 'object' ||
+      catalog.tags === null ||
+      Array.isArray(catalog.tags) ||
+      Object.values(catalog.tags).some(
+        (members) => !Array.isArray(members) || members.some((member) => typeof member !== 'string'),
+      ))
+  )
+    throw new Error('Invalid catalog tags')
   const sourceIds = new Set()
   for (const source of catalog.sources) {
     if (!source.id || sourceIds.has(source.id) || !source.name || !source.kind)
@@ -47,6 +57,8 @@ export function validateCatalog(catalog) {
         !['items', 'mB'].includes(stack.unit) ||
         (stack.chance !== null &&
           (typeof stack.chance !== 'number' || stack.chance < 0 || stack.chance > 1)) ||
+        (stack.chanceBoost !== undefined &&
+          (typeof stack.chanceBoost !== 'number' || !Number.isFinite(stack.chanceBoost))) ||
         (stack.nbt !== undefined && typeof stack.nbt !== 'string')
       ) {
         throw new Error(`Invalid stack in recipe: ${recipe.key}`)
