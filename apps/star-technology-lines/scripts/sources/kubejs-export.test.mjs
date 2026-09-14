@@ -62,12 +62,55 @@ test('keeps ambiguous ingredients and unknown recipe types for review', async ()
     )
     await writeFile(
       path.join(folder, 'mixing.json'),
-      JSON.stringify({ type: 'create:mixing', ingredients: [], results: [{ item: 'start:product' }] }),
+      JSON.stringify({ type: 'unknown:mixing', ingredients: [], result: { item: 'start:product' } }),
     )
     const result = await importKubeJsExport(root)
     assert.equal(result.recipes.length, 2)
     assert.match(result.recipes[0].unresolved.join(' '), /alternative ingredients/)
     assert.match(result.recipes[1].unresolved.join(' '), /needs an adapter/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('normalizes crafting, Create processing, and sifting while retaining exact export data', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'starline-export-'))
+  try {
+    const folder = path.join(root, 'recipes', 'start')
+    await mkdir(folder, { recursive: true })
+    const cases = {
+      shaped: {
+        type: 'minecraft:crafting_shaped',
+        pattern: ['aa', 'aa'],
+        key: { a: { item: 'minecraft:iron_ingot' } },
+        result: { item: 'start:plate', count: 2 },
+      },
+      crushing: {
+        type: 'create:crushing',
+        ingredients: [{ item: 'start:ore' }],
+        results: [{ item: 'start:crushed' }, { item: 'start:bonus', chance: 0.25 }],
+        processingTime: 400,
+      },
+      sifting: {
+        type: 'exnihilosequentia:sifting',
+        input: { item: 'minecraft:gravel' },
+        result: { item: 'start:pebble' },
+        rolls: [{ mesh: 'string', chance: 0.1 }],
+      },
+    }
+    for (const [name, recipe] of Object.entries(cases))
+      await writeFile(path.join(folder, `${name}.json`), JSON.stringify(recipe))
+    const result = await importKubeJsExport(root)
+    const byId = Object.fromEntries(result.recipes.map((recipe) => [recipe.gameId, recipe]))
+    assert.deepEqual(byId['start:shaped'].inputs, [
+      { id: 'minecraft:iron_ingot', amount: 4, unit: 'items', chance: null },
+    ])
+    assert.equal(byId['start:shaped'].outputs[0].amount, 2)
+    assert.equal(byId['start:crushing'].durationTicks, 400)
+    assert.equal(byId['start:crushing'].outputs[1].chance, 0.25)
+    assert.equal(byId['start:sifting'].outputs[0].chance, 0.1)
+    assert.deepEqual(result.rawRecipes['runtime:start:shaped'], cases.shaped)
+    assert.equal(Object.keys(result.rawRecipes).length, 3)
   } finally {
     await rm(root, { recursive: true, force: true })
   }

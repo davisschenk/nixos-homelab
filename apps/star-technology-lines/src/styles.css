@@ -1629,6 +1629,7 @@ svg {
 }
 .recipe-card-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
@@ -1656,6 +1657,28 @@ svg {
 }
 .recipe-card-actions button:hover {
   background: #c2a3f6;
+}
+.recipe-card-actions .recipe-inspect {
+  margin-left: auto;
+  background: #26374a;
+  border-color: #52657d;
+  color: #d2e0ef;
+}
+.recipe-card-actions .recipe-inspect:hover {
+  background: #344b65;
+}
+.recipe-raw {
+  max-height: 320px;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid #3b4d63;
+  border-radius: 5px;
+  background: #101925;
+  color: #cbd8e8;
+  font-size: 10px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .catalog-empty,
 .catalog-more {

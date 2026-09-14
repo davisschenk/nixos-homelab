@@ -25,9 +25,10 @@ function ingredient(value, unit, amount, unresolved, label, tags = {}, details =
     unresolved.push(`${label}: ranged amount requires review`)
     return []
   }
-  if (value.nbt) unresolved.push(`${label}: NBT constraint requires review`)
+  if (value.nbt && (typeof value.nbt !== 'object' || Object.keys(value.nbt).length))
+    unresolved.push(`${label}: NBT constraint requires review`)
   const id = unit === 'mB' ? (value.fluid ?? value.tag) : (value.item ?? value.tag)
-  if (!id || !positive(amount)) {
+  if (typeof id !== 'string' || !id || !positive(amount)) {
     unresolved.push(`${label}: missing identity or amount`)
     return []
   }
@@ -61,11 +62,12 @@ function capability(
     const chance = entry?.chance
     const denominator = entry?.maxChance ?? 10000
     if (chance !== undefined && positive(denominator)) {
-      for (const item of parsed) item.chance = chance / denominator
+      if (chance >= 0 && chance <= denominator) for (const item of parsed) item.chance = chance / denominator
+      else unresolved.push(`${name}: chance is outside its denominator`)
     } else if (chance !== undefined) {
       unresolved.push(`${name}: invalid chance denominator`)
     }
-    if (entry?.tierChanceBoost)
+    if (Number.isFinite(entry?.tierChanceBoost) && entry.tierChanceBoost)
       for (const item of parsed) item.chanceBoost = entry.tierChanceBoost / denominator
     if (ticks && !positive(duration)) unresolved.push(`${name}: duration is needed for per-tick input`)
     if (ticks && positive(duration)) for (const item of parsed) item.amount *= duration
@@ -230,27 +232,90 @@ function gtRecipe(raw, sourcePath, id, sourceId, tags) {
   }
 }
 
-function otherRecipe(raw, sourcePath, id, sourceId) {
-  const unresolved = [`${raw.type ?? 'unknown'}: recipe type needs an adapter`]
-  const result = raw.result ?? raw.output
-  const outputs = result ? ingredient(result, 'items', result.count ?? 1, unresolved, 'result') : []
+const itemStack = (value, tags, unresolved, label, count = 1) => {
+  const selected = typeof value === 'string' ? { item: value } : value
+  const unit = selected?.fluid ? 'mB' : 'items'
+  const amount = selected?.amount ?? selected?.count ?? count
+  const parsed = ingredient(selected, unit, amount, unresolved, label, tags)
+  if (selected?.chance != null) {
+    if (selected.chance >= 0 && selected.chance <= 1)
+      for (const entry of parsed) entry.chance = selected.chance
+    else unresolved.push(`${label}: weighted chance needs normalization`)
+  }
+  return parsed
+}
+
+const compactStacks = (stacks) => {
+  const result = new Map()
+  for (const item of stacks) {
+    const key = `${item.id}|${item.unit}|${item.chance ?? ''}`
+    const existing = result.get(key)
+    if (existing) existing.amount += item.amount
+    else result.set(key, { ...item })
+  }
+  return [...result.values()]
+}
+
+function otherRecipe(raw, sourcePath, id, sourceId, tags) {
+  const type = raw.type ?? 'unknown'
+  const unresolved = []
+  let inputs = []
+  let outputs = []
+  let durationTicks = null
+  if (type === 'minecraft:crafting_shaped') {
+    const symbols = [...(raw.pattern ?? []).join('')].filter((symbol) => symbol !== ' ')
+    inputs = symbols.flatMap((symbol, index) =>
+      itemStack(raw.key?.[symbol], tags, unresolved, `pattern[${index}]`),
+    )
+    outputs = itemStack(raw.result, tags, unresolved, 'result')
+  } else if (type === 'minecraft:stonecutting') {
+    inputs = itemStack(raw.ingredient, tags, unresolved, 'ingredient')
+    outputs = itemStack(raw.result, tags, unresolved, 'result', raw.count ?? 1)
+  } else if (
+    type === 'minecraft:crafting_shapeless' ||
+    (type.startsWith('minecraft:') && 'ingredient' in raw)
+  ) {
+    inputs = (raw.ingredients ?? [raw.ingredient]).flatMap((item, index) =>
+      itemStack(item, tags, unresolved, `ingredients[${index}]`),
+    )
+    outputs = itemStack(raw.result, tags, unresolved, 'result', raw.count ?? 1)
+    durationTicks = raw.cookingtime ?? null
+  } else if (type.startsWith('create:') || type.startsWith('vintage:')) {
+    inputs = (raw.ingredients ?? (raw.ingredient ? [raw.ingredient] : [])).flatMap((item, index) =>
+      itemStack(item, tags, unresolved, `ingredients[${index}]`),
+    )
+    outputs = (raw.results ?? (raw.result ? [raw.result] : [])).flatMap((item, index) =>
+      itemStack(item, tags, unresolved, `results[${index}]`),
+    )
+    durationTicks = raw.processingTime ?? null
+    if (raw.heatRequirement) unresolved.push(`Heat requirement: ${raw.heatRequirement}`)
+    if (raw.sequence) unresolved.push('Sequenced assembly needs step-level review')
+  } else if (type === 'exnihilosequentia:sifting') {
+    inputs = itemStack(raw.input, tags, unresolved, 'input')
+    outputs = itemStack(raw.result, tags, unresolved, 'result')
+    if (outputs[0] && raw.rolls?.length === 1) outputs[0].chance = raw.rolls[0].chance
+    if (raw.rolls?.length !== 1) unresolved.push('Mesh-specific rolls need selection')
+  } else {
+    unresolved.push(`${type}: recipe type needs an adapter`)
+    const result = raw.result ?? raw.output
+    if (result) outputs = itemStack(result, tags, unresolved, 'result')
+  }
+  if (raw.nbt || raw['kubejs:actions']) unresolved.push('Recipe has additional data')
   return {
     key: `runtime:${id}`,
     sourceId,
     sourcePath,
     sourceLine: 1,
     gameId: id,
-    family: raw.type ?? 'unknown',
-    machine: String(raw.type ?? 'unknown')
-      .split(':')
-      .pop(),
-    inputs: [],
-    outputs,
+    family: type,
+    machine: String(type).split(':').pop(),
+    inputs: compactStacks(inputs),
+    outputs: compactStacks(outputs),
     catalysts: [],
-    durationTicks: null,
-    eut: null,
+    durationTicks,
+    eut: type.startsWith('create:') || type.startsWith('vintage:') ? 0 : null,
     circuit: null,
-    unresolved,
+    unresolved: [...new Set(unresolved)],
   }
 }
 
@@ -297,6 +362,7 @@ export async function importKubeJsExport(exportRoot, sourceId = 'star-technology
   if (!files.length) throw new Error(`No recipe JSON files found in ${recipesRoot}`)
   const tags = await exportTags(exportRoot)
   const recipes = []
+  const rawRecipes = {}
   const diagnostics = []
   for (const relative of files) {
     const sourcePath = path.posix.join('recipes', relative)
@@ -308,14 +374,15 @@ export async function importKubeJsExport(exportRoot, sourceId = 'star-technology
     }
     try {
       const raw = JSON.parse(await readFile(path.join(recipesRoot, relative), 'utf8'))
+      rawRecipes[`runtime:${id}`] = raw
       recipes.push(
         String(raw.type ?? '').startsWith('gtceu:')
           ? gtRecipe(raw, sourcePath, id, sourceId, tags)
-          : otherRecipe(raw, sourcePath, id, sourceId),
+          : otherRecipe(raw, sourcePath, id, sourceId, tags),
       )
     } catch (error) {
       diagnostics.push({ file: sourcePath, issue: String(error) })
     }
   }
-  return { recipes, diagnostics, fileCount: files.length, tags }
+  return { recipes, diagnostics, fileCount: files.length, tags, rawRecipes }
 }
