@@ -1368,6 +1368,37 @@ function CatalogDrawer({
   onAdd: (recipe: CatalogRecipe) => void
   onClose: () => void
 }) {
+  const [rawKey, setRawKey] = useState<string | null>(null)
+  const [rawData, setRawData] = useState<unknown>(null)
+  const [rawError, setRawError] = useState('')
+  const rawCache = useRef<Record<string, unknown> | null>(null)
+  const rawRequest = useRef('')
+  const inspectExport = async (recipe: CatalogRecipe) => {
+    if (rawKey === recipe.key) {
+      rawRequest.current = ''
+      setRawKey(null)
+      return
+    }
+    if (!catalog?.rawCatalog) return
+    rawRequest.current = recipe.key
+    setRawKey(recipe.key)
+    setRawData(null)
+    setRawError('')
+    try {
+      if (!rawCache.current) {
+        const response = await fetch(`${import.meta.env.BASE_URL}${catalog.rawCatalog}`)
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        const archive = await response.json()
+        if (archive.packVersion !== catalog.packVersion || !archive.recipes)
+          throw new Error('Export version does not match the catalog')
+        rawCache.current = archive.recipes
+      }
+      if (rawRequest.current === recipe.key) setRawData(rawCache.current?.[recipe.key] ?? null)
+    } catch (error) {
+      if (rawRequest.current === recipe.key)
+        setRawError(error instanceof Error ? error.message : 'Export unavailable')
+    }
+  }
   const results = catalog ? searchRecipes(catalog, query, includePartial) : []
   const completeCount = catalog?.recipes.filter(recipeIsReady).length ?? 0
   return (
@@ -1424,7 +1455,11 @@ function CatalogDrawer({
               <div className="recipe-card-top">
                 <span className="recipe-family">{recipe.family.toUpperCase()}</span>
                 <span className={recipeIsReady(recipe) ? 'recipe-ready' : 'recipe-review'}>
-                  {recipeIsReady(recipe) ? 'READY' : 'REVIEW'}
+                  {recipe.availability === 'source-declaration'
+                    ? 'SOURCE ONLY'
+                    : recipeIsReady(recipe)
+                      ? 'READY'
+                      : 'REVIEW'}
                 </span>
               </div>
               <strong>{displayName(recipe.outputs[0]?.id ?? recipe.gameId ?? recipe.machine)}</strong>
@@ -1445,7 +1480,9 @@ function CatalogDrawer({
               </div>
               {!recipeIsCalculable(recipe) && (
                 <p className="recipe-warning">
-                  Review timing and unresolved fields before planning throughput
+                  {recipe.availability === 'source-declaration'
+                    ? 'Source declaration; compare with the registered export before using its rates.'
+                    : 'Review timing and unresolved fields before planning throughput.'}
                 </p>
               )}
               <div className="recipe-card-actions">
@@ -1456,10 +1493,20 @@ function CatalogDrawer({
                 ) : (
                   <span>In-game export</span>
                 )}
+                {recipe.availability === 'registered' && catalog?.rawCatalog && (
+                  <button className="recipe-inspect" onClick={() => inspectExport(recipe)}>
+                    {rawKey === recipe.key ? 'Hide JSON' : 'Inspect JSON'}
+                  </button>
+                )}
                 <button onClick={() => onAdd(recipe)}>
                   <Icon name="plus" size={14} /> Add to line
                 </button>
               </div>
+              {rawKey === recipe.key && (
+                <pre className="recipe-raw">
+                  {rawError || (rawData ? JSON.stringify(rawData, null, 2) : 'Loading exported recipe...')}
+                </pre>
+              )}
             </div>
           ))}
           {catalog && results.length === 0 && (

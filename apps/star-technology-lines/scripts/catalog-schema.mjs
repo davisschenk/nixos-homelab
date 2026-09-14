@@ -19,9 +19,19 @@ export function validateCatalog(catalog) {
       ))
   )
     throw new Error('Invalid catalog tags')
+  if (catalog.rawCatalog !== undefined && (typeof catalog.rawCatalog !== 'string' || !catalog.rawCatalog))
+    throw new Error('Invalid raw catalog path')
   const sourceIds = new Set()
   for (const source of catalog.sources) {
-    if (!source.id || sourceIds.has(source.id) || !source.name || !source.kind)
+    if (
+      !source.id ||
+      sourceIds.has(source.id) ||
+      !source.name ||
+      !source.kind ||
+      (source.recipeCount !== undefined &&
+        (!Number.isInteger(source.recipeCount) || source.recipeCount < 0)) ||
+      (source.fileCount !== undefined && (!Number.isInteger(source.fileCount) || source.fileCount < 0))
+    )
       throw new Error(`Invalid or duplicate source: ${source.id}`)
     sourceIds.add(source.id)
   }
@@ -41,6 +51,8 @@ export function validateCatalog(catalog) {
       !Array.isArray(recipe.catalysts) ||
       !Array.isArray(recipe.unresolved) ||
       recipe.unresolved.some((issue) => typeof issue !== 'string') ||
+      (recipe.availability !== undefined &&
+        !['registered', 'source-declaration'].includes(recipe.availability)) ||
       (recipe.durationTicks !== null && !Number.isFinite(recipe.durationTicks)) ||
       (recipe.eut !== null && !Number.isFinite(recipe.eut))
     ) {

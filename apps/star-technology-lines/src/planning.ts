@@ -35,7 +35,7 @@ export const recipeTiming = (durationTicks: number | null, eut: number | null, t
 }
 
 export const stageTiming = (stage: Stage) => {
-  if (!stage.recipeRef)
+  if (!stage.recipeRef || (stage.recipeRef.family && stage.recipeRef.family !== 'gtceu'))
     return {
       durationSeconds: stage.duration,
       eut: stage.eut,
@@ -71,7 +71,13 @@ export const machinesForInput = (
   incomingPerMinute: number,
   tier: string,
 ) => {
-  const timing = recipeTiming(recipe.durationTicks, recipe.eut, tier)
+  const timing =
+    recipe.family === 'gtceu'
+      ? recipeTiming(recipe.durationTicks, recipe.eut, tier)
+      : {
+          durationSeconds: recipe.durationTicks == null ? null : recipe.durationTicks / 20,
+          runnable: recipe.durationTicks != null && recipe.durationTicks > 0,
+        }
   if (!timing.runnable || timing.durationSeconds == null || input.amount <= 0) return null
   return Math.max(1, Math.ceil((incomingPerMinute * timing.durationSeconds) / (input.amount * 60) - 1e-9))
 }

@@ -26,6 +26,7 @@ export type CatalogRecipe = {
   eut: number | null
   circuit: number | null
   unresolved: string[]
+  availability?: 'registered' | 'source-declaration'
 }
 export type CatalogSource = {
   id: string
@@ -35,6 +36,8 @@ export type CatalogSource = {
   commit: string
   license: string
   scope: string
+  recipeCount?: number
+  fileCount?: number
 }
 export type Catalog = {
   schemaVersion: number
@@ -46,6 +49,7 @@ export type Catalog = {
   tags?: Record<string, string[]>
   diagnostics: { file: string; issue: string }[]
   fileCount: number
+  rawCatalog?: string
 }
 
 export const displayName = (id: string) =>
@@ -58,7 +62,10 @@ export const displayStack = (stack: RecipeStack) =>
 export const recipeIsReady = (recipe: CatalogRecipe) => recipeIsCalculable(recipe)
 
 export const recipeIsCalculable = (recipe: CatalogRecipe) =>
-  recipe.family === 'gtceu' &&
+  recipe.availability !== 'source-declaration' &&
+  (recipe.family === 'gtceu' ||
+    recipe.family.startsWith('create:') ||
+    recipe.family.startsWith('vintage:')) &&
   recipe.inputs.length > 0 &&
   recipe.outputs.length > 0 &&
   recipe.durationTicks != null &&
@@ -135,6 +142,7 @@ export const stageFromRecipe = (recipe: CatalogRecipe, x: number, y: number): St
       sourcePath: recipe.sourcePath,
       sourceLine: recipe.sourceLine,
       gameId: recipe.gameId,
+      family: recipe.family,
       unresolved: recipe.unresolved,
       reviewRequired: !recipeIsReady(recipe),
     },

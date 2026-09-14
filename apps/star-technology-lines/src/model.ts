@@ -29,6 +29,7 @@ export type Stage = {
     sourcePath: string
     sourceLine: number
     gameId: string | null
+    family?: string
     unresolved: string[]
     reviewRequired: boolean
     modified?: boolean
