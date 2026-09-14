@@ -7,6 +7,7 @@ on:
       - ".github/**"
       - "flake.nix"
       - "flake.lock"
+      - "apps/**"
       - "hosts/**"
       - "infra/**"
       - "modules/**"
