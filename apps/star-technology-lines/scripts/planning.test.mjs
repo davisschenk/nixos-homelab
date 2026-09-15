@@ -29,6 +29,11 @@ test('total output separates produced, allocated, and net rates for items and fl
     links: [{ fromStage: 'source', fromPort: 'ore', toStage: 'processor', toPort: 'ore-in' }],
   }
   const totals = outputTotals(project, analyzeLine(project))
+  const processorAnalysis = analyzeLine(project).stages.get('processor')
+  assert.equal(processorAnalysis.isBottleneck, true)
+  assert.equal(processorAnalysis.inputPotentialPerMinute, 2)
+  assert.equal(processorAnalysis.capacityPerMinute, 1)
+  assert.equal(processorAnalysis.requiredParallel, 2)
   assert.deepEqual(
     totals.find((output) => output.name === 'Raw ore'),
     {
@@ -50,4 +55,31 @@ test('total output separates produced, allocated, and net rates for items and fl
     },
   )
   assert.equal(totals.find((output) => output.name === 'Water')?.net, 100)
+})
+
+test('a machine that can consume its linked supply is not marked as a bottleneck', () => {
+  const source = {
+    id: 'source',
+    duration: 60,
+    eut: 16,
+    parallel: 1,
+    tier: 'LV',
+    inputs: [],
+    outputs: [{ id: 'ore', name: 'Ore', amount: 2, unit: 'items' }],
+  }
+  const processor = {
+    id: 'processor',
+    duration: 60,
+    eut: 16,
+    parallel: 2,
+    tier: 'LV',
+    inputs: [{ id: 'ore-in', name: 'Ore', amount: 1, unit: 'items' }],
+    outputs: [],
+  }
+  const analysis = analyzeLine({
+    stages: [source, processor],
+    links: [{ fromStage: 'source', fromPort: 'ore', toStage: 'processor', toPort: 'ore-in' }],
+  }).stages.get('processor')
+  assert.equal(analysis.isBottleneck, false)
+  assert.equal(analysis.requiredParallel, null)
 })
