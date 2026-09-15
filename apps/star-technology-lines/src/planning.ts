@@ -85,6 +85,9 @@ export const machinesForInput = (
 export type StageAnalysis = {
   runsPerMinute: number
   capacityPerMinute: number
+  inputPotentialPerMinute: number | null
+  requiredParallel: number | null
+  isBottleneck: boolean
   timing: ReturnType<typeof stageTiming>
   outputs: Map<string, number>
   externalInputs: Map<string, number>
@@ -116,14 +119,26 @@ export const analyzeLine = (project: Project): LineAnalysis => {
         ? (Math.max(1, stage.parallel) * 60) / timing.durationSeconds
         : 0
     let runsPerMinute = capacityPerMinute
+    let inputPotentialPerMinute: number | null = null
     const externalInputs = new Map<string, number>()
     for (const input of stage.inputs) {
       const links = project.links.filter((link) => link.toStage === stage.id && link.toPort === input.id)
       if (links.length && input.amount > 0) {
         const supplied = links.reduce((sum, link) => sum + (available.get(link.fromPort) ?? 0), 0)
-        runsPerMinute = Math.min(runsPerMinute, supplied / input.amount)
+        const potential = supplied / input.amount
+        inputPotentialPerMinute = Math.min(inputPotentialPerMinute ?? potential, potential)
+        runsPerMinute = Math.min(runsPerMinute, potential)
       }
     }
+    const isBottleneck = inputPotentialPerMinute != null && inputPotentialPerMinute > capacityPerMinute + 1e-9
+    const perMachineCapacity =
+      timing.runnable && timing.durationSeconds != null && timing.durationSeconds > 0
+        ? 60 / timing.durationSeconds
+        : 0
+    const requiredParallel =
+      isBottleneck && perMachineCapacity > 0
+        ? Math.max(1, Math.ceil(inputPotentialPerMinute! / perMachineCapacity - 1e-9))
+        : null
     for (const input of stage.inputs) {
       const links = project.links.filter((link) => link.toStage === stage.id && link.toPort === input.id)
       const demand = runsPerMinute * input.amount
@@ -145,7 +160,16 @@ export const analyzeLine = (project: Project): LineAnalysis => {
       outputs.set(output.id, rate)
       available.set(output.id, rate)
     }
-    stages.set(stage.id, { runsPerMinute, capacityPerMinute, timing, outputs, externalInputs })
+    stages.set(stage.id, {
+      runsPerMinute,
+      capacityPerMinute,
+      inputPotentialPerMinute,
+      requiredParallel,
+      isBottleneck,
+      timing,
+      outputs,
+      externalInputs,
+    })
     for (const link of project.links.filter((link) => link.fromStage === stage.id)) {
       const remaining = (indegree.get(link.toStage) ?? 0) - 1
       indegree.set(link.toStage, remaining)

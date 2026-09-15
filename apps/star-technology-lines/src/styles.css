@@ -412,6 +412,10 @@ svg {
   padding: 0 19px;
   text-align: right;
 }
+.stat-tip.has-bottleneck {
+  color: #ffad9f;
+  font-weight: 700;
+}
 .workspace-body {
   display: flex;
   gap: 17px;
@@ -596,6 +600,13 @@ svg {
     0 17px 34px #030a1299,
     0 0 25px #9870dd25;
 }
+.stage-node.bottleneck {
+  border-color: #b96058;
+  box-shadow:
+    0 0 0 1px #9b4844,
+    0 14px 30px #030a128c,
+    0 0 22px #d4554b20;
+}
 .node-head {
   height: 69px;
   display: flex;
@@ -681,6 +692,11 @@ svg {
 }
 .node-meta svg {
   color: #ab8ddc;
+}
+.node-meta .capacity-warning {
+  color: #ff9f91;
+  font-weight: 800;
+  white-space: nowrap;
 }
 .port-labels {
   height: 28px;
@@ -1316,6 +1332,33 @@ svg {
   background: linear-gradient(135deg, #302845, #222b3f);
   padding: 13px;
   margin-top: 14px;
+}
+.bottleneck-card {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #a6534e;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #442827, #292434);
+  padding: 13px;
+  margin-top: 14px;
+}
+.bottleneck-card strong {
+  color: #ffb2a7;
+  font-size: 12px;
+}
+.bottleneck-card span {
+  color: #c9a5a1;
+  font-size: 10px;
+  line-height: 1.45;
+}
+.bottleneck-card button {
+  border: 1px solid #b9635c;
+  border-radius: 5px;
+  background: #703d3a;
+  color: #ffe6e2;
+  padding: 7px 9px;
+  font-size: 10px;
+  font-weight: 700;
 }
 .throughput-card small {
   display: block;

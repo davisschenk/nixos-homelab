@@ -56,6 +56,7 @@ const sourceMachineName = (machine: string) =>
 const sourceTitle = (recipe: CatalogRecipe) =>
   `${sourceMachineName(recipe.machine)} · ${displayName(recipe.gameId?.split('/').pop() ?? recipe.machine)}`
 const isRawOre = (port: Port) => port.unit === 'items' && /:raw_[^/]+$/.test(port.materialId ?? '')
+const formatRate = (rate: number) => new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(rate)
 
 const nextTier = (sourceTier: string, recipeEut: number | null) => {
   const source = VOLTAGE_TIERS.indexOf(sourceTier)
@@ -591,6 +592,7 @@ function App() {
     (sum, stage) => sum + Math.max(0, stageTiming(stage).eut ?? 0) * Math.max(1, stage.parallel),
     0,
   )
+  const bottleneckCount = [...analysis.stages.values()].filter((stage) => stage.isBottleneck).length
   const linkSource = selectedLink && project.stages.find((s) => s.id === selectedLink.fromStage)
   const linkTarget = selectedLink && project.stages.find((s) => s.id === selectedLink.toStage)
 
@@ -739,7 +741,11 @@ function App() {
               <small>CONFIGURED POWER</small>
             </div>
           </div>
-          <div className="stat-tip">Rates include machine tier, chance, and available linked inputs.</div>
+          <div className={`stat-tip ${bottleneckCount ? 'has-bottleneck' : ''}`}>
+            {bottleneckCount
+              ? `⚠ ${bottleneckCount} machine${bottleneckCount === 1 ? '' : 's'} cannot keep up with incoming material`
+              : 'Rates include machine tier, chance, and available linked inputs.'}
+          </div>
         </div>
         {sourceStages.length === 0 ? (
           <section className="extractor-banner">
@@ -981,7 +987,7 @@ function App() {
                       {project.stages.map((stage, index) => (
                         <div
                           key={stage.id}
-                          className={`stage-node ${selectedId === stage.id || selectedOutput?.stageId === stage.id ? 'selected' : ''}`}
+                          className={`stage-node ${selectedId === stage.id || selectedOutput?.stageId === stage.id ? 'selected' : ''} ${analysis.stages.get(stage.id)?.isBottleneck ? 'bottleneck' : ''}`}
                           style={{ left: stage.x, top: stage.y }}
                           onClick={(event) => {
                             event.stopPropagation()
@@ -1019,7 +1025,19 @@ function App() {
                               <Icon name="bolt" size={13} />{' '}
                               {analysis.stages.get(stage.id)?.timing.eut ?? '?'} EU/t
                             </span>
-                            <span>×{stage.parallel}</span>
+                            {analysis.stages.get(stage.id)?.isBottleneck ? (
+                              <span
+                                className="capacity-warning"
+                                title={`Configured for ${stage.parallel}; needs ${analysis.stages.get(stage.id)?.requiredParallel ?? 'a valid recipe configuration'}`}
+                              >
+                                ⚠{' '}
+                                {analysis.stages.get(stage.id)?.requiredParallel
+                                  ? `needs ×${analysis.stages.get(stage.id)?.requiredParallel}`
+                                  : 'no capacity'}
+                              </span>
+                            ) : (
+                              <span>×{stage.parallel}</span>
+                            )}
                           </div>
                           <div className="port-labels">
                             <span>INPUTS</span>
@@ -1835,6 +1853,27 @@ function StageInspector({
           onChange={(event) => set('notes', event.target.value)}
         />
       </label>
+      {analysis?.isBottleneck && (
+        <div className="bottleneck-card" role="alert">
+          <strong>⚠ This machine cannot keep up</strong>
+          {analysis.requiredParallel ? (
+            <>
+              <span>
+                Incoming material supports {formatRate(analysis.inputPotentialPerMinute ?? 0)} cycles/min,
+                while ×{stage.parallel} can run {formatRate(analysis.capacityPerMinute)} cycles/min.
+              </span>
+              <button onClick={() => set('parallel', analysis.requiredParallel!)}>
+                Set to ×{analysis.requiredParallel} machines
+              </button>
+            </>
+          ) : (
+            <span>
+              Incoming material is waiting, but this stage has no valid processing capacity. Check its tier
+              and duration.
+            </span>
+          )}
+        </div>
+      )}
       <div className="throughput-card">
         <small>FIRST OUTPUT · EXPECTED RATE</small>
         <strong>
