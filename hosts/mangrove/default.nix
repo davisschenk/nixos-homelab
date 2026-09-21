@@ -49,6 +49,8 @@
     mode = "0440";
   };
 
+  mylab.mcp.enable = true;
+
   mylab.gameServers = {
     enable = true;
     defaultOwner.email = "davis.schenkenberger@gmail.com";

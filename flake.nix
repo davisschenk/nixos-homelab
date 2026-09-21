@@ -190,6 +190,16 @@
                 python3 ${./pkgs/pelican-reconciler/test_reconciler.py}
               touch $out
             '';
+        mcp-token-auth =
+          pkgs.runCommand "mcp-token-auth-tests"
+            {
+              nativeBuildInputs = [ pkgs.python3 ];
+            }
+            ''
+              MCP_TOKEN_AUTH_PATH=${./pkgs/mcp-token-auth/server.py} \
+                python3 ${./pkgs/mcp-token-auth/test_server.py}
+              touch $out
+            '';
       };
 
       apps.${system}.deploy = {
