@@ -76,6 +76,7 @@ GeoIP locations are approximate. DB-IP attribution is included in both map dashb
 | Frigate | `frigate.schenkenberger.dev` | Camera NVR |
 | Home Assistant | `homeassistant.schenkenberger.dev` | Home automation |
 | VM console | `console.schenkenberger.dev` | Gaming VM console |
+| Custom MCP servers | `mcp-<name>.schenkenberger.dev` | Authenticated Streamable HTTP tools for AI clients |
 
 Most web applications are protected by Authentik through Caddy.
 
@@ -99,6 +100,7 @@ tests/
 Terraform state is remotely locked and versioned in the HCP Terraform organization `davisschenk-homelab`, workspace `nixos-homelab-production`. Terraform manages the Estuary VPS, OVH edge firewall, and DNS-only `play.schenkenberger.dev` and `*.mc.schenkenberger.dev` records. The existing Cloudflare Tunnel and root wildcard DNS remain outside Terraform.
 
 Selected Pelican servers and native Infrarust routes can be managed through the [declarative game-server catalog](docs/game-servers.md).
+Custom Model Context Protocol servers can be deployed through the [MCP hosting module](docs/mcp-hosting.md).
 
 ## Development workflow
 

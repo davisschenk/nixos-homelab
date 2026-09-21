@@ -166,5 +166,10 @@
       default = 6080;
       description = "noVNC web console proxy listen port (libvirt VM console access).";
     };
+    mcpAuth = lib.mkOption {
+      type = lib.types.port;
+      default = 8092;
+      description = "MCP bearer token verifier listen port.";
+    };
   };
 }

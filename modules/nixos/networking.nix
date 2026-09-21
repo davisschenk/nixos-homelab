@@ -8,6 +8,25 @@ let
   # nixarr VPN namespace host-side gateway — see nixarr vpnNamespace subnet config
   nixarrVpnGateway = "192.168.15.1";
   appPortal = pkgs.callPackage ../../pkgs/app-portal { };
+  mcpRoutes = lib.concatStringsSep "\n" (
+    lib.mapAttrsToList (
+      name: server:
+      let
+        matcherName = builtins.replaceStrings [ "-" ] [ "_" ] name;
+      in
+      ''
+        @mcp_${matcherName} host ${server.domain}
+        handle @mcp_${matcherName} {
+          forward_auth localhost:${toString config.mylab.ports.mcpAuth} {
+            uri /verify
+          }
+          reverse_proxy localhost:${toString server.hostPort} {
+            header_up -Authorization
+          }
+        }
+      ''
+    ) config.mylab.mcp.servers
+  );
 in
 {
   # Cloudflare Tunnel sole public ingress; no ports need opening
@@ -234,6 +253,8 @@ in
         handle @coder_app {
           reverse_proxy localhost:${toString config.mylab.ports.coder}
         }
+
+        ${lib.optionalString config.mylab.mcp.enable mcpRoutes}
 
         handle {
           redir * https://http.cat/404

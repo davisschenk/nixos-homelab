@@ -26,5 +26,6 @@
     ./frigate.nix
     ./home-assistant.nix
     ./security.nix
+    ./mcp.nix
   ];
 }
