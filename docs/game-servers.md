@@ -4,6 +4,21 @@
 Pelican panel, console, file manager, and Wings SFTP available for day-to-day
 operations. Servers not present in the catalog are never touched.
 
+## Valheim: The Bog
+
+`mangrove` declares a Valheim server named **The Bog** using the
+[Pelican Valheim egg](https://github.com/pelican-eggs/games-steamcmd/blob/26b4b0bf8c3181d7bfe05644dffff81026fcf7d5/valheim/valheim_vanilla/egg-valheim.json).
+The egg must be imported into Pelican before the catalog is deployed. The
+server uses crossplay, so players can join through the in-game join code or
+server list. No additional public ingress is needed, and local IP joining is
+not supported by the crossplay backend.
+
+The password is stored as `valheim_password` in `secrets/pelican.yaml`. Retrieve
+it with `sops --decrypt --extract '["valheim_password"]' secrets/pelican.yaml`
+and share it with players privately. After the first reconciliation creates the
+server, start it from Pelican. World files live under the persistent Pelican
+Wings data directory and are included in the `/persist` restic backup.
+
 Public ports remain separately reviewed in `infra/ingress.json`. A catalog entry
 can reference an ingress rule, but the reconciler cannot create or change edge
 firewall, nftables, WireGuard, or Terraform resources.

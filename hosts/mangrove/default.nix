@@ -42,11 +42,26 @@
     mode = "0440";
   };
 
+  sops.secrets.valheim_password = {
+    sopsFile = ../../secrets/pelican.yaml;
+    owner = "root";
+    group = "game-servers";
+    mode = "0440";
+  };
+
   sops.templates."curseforge-environment" = {
     content = "API_KEY=${config.sops.placeholder.curseforge_api_key}\n";
     owner = "root";
     group = "game-servers";
     mode = "0440";
+  };
+
+  sops.templates."valheim-environment" = {
+    content = "PASSWORD=${config.sops.placeholder.valheim_password}\n";
+    owner = "root";
+    group = "game-servers";
+    mode = "0440";
+    restartUnits = [ "pelican-reconcile.service" ];
   };
 
   mylab.mcp.enable = true;
@@ -124,6 +139,39 @@
       minecraft.infrarust = {
         enable = true;
         domains = [ "aeronautics.mc.schenkenberger.dev" ];
+      };
+    };
+
+    servers.valheim = {
+      displayName = "The Bog";
+      eggUuid = "af693402-1618-49e0-8678-0818aae9b92e";
+      image = "ghcr.io/parkervcp/games:valheim";
+
+      environment = {
+        AUTO_UPDATE = "1";
+        ENABLE_CROSSPLAY = "1";
+        PUBLIC_SERVER = "1";
+        SERVER_NAME = "The Bog";
+        WORLD = "The Bog";
+      };
+      secretEnvironmentFile = config.sops.templates."valheim-environment".path;
+
+      limits = {
+        memory = 6144;
+        swap = 0;
+        disk = 20480;
+        io = 500;
+        cpu = 200;
+      };
+
+      allocations.game = {
+        ip = "127.0.0.1";
+        port = 2456;
+        primary = true;
+      };
+      allocations.query = {
+        ip = "127.0.0.1";
+        port = 2457;
       };
     };
   };
