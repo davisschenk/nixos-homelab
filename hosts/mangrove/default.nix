@@ -149,9 +149,16 @@
 
       environment = {
         AUTO_UPDATE = "1";
+        BACKUP_COUNT = "4";
+        BACKUP_INTERVAL = "1800";
+        BACKUP_LONGTIME = "43200";
+        BACKUP_SHORTTIME = "7200";
+        CONSOLE_FILTER = "/^$/d";
         ENABLE_CROSSPLAY = "1";
+        LD_LIBRARY_PATH = "./linux64";
         PUBLIC_SERVER = "1";
         SERVER_NAME = "The Bog";
+        SRCDS_APPID = "896660";
         WORLD = "The Bog";
       };
       secretEnvironmentFile = config.sops.templates."valheim-environment".path;
