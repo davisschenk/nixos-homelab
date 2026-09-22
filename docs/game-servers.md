@@ -12,6 +12,8 @@ The egg must be imported into Pelican before the catalog is deployed. The
 server uses crossplay, so players can join through the in-game join code or
 server list. No additional public ingress is needed, and local IP joining is
 not supported by the crossplay backend.
+Pelican's create API leaves omitted egg defaults empty, so the catalog declares
+the Steam app ID and startup variables explicitly.
 
 The password is stored as `valheim_password` in `secrets/pelican.yaml`. Retrieve
 it with `sops --decrypt --extract '["valheim_password"]' secrets/pelican.yaml`
