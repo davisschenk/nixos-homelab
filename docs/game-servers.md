@@ -145,6 +145,11 @@ The reconciler patches declared metadata and runtime configuration but never
 starts, stops, or reinstalls a server. A reported `operator action required`
 must be handled through Pelican during a maintenance window.
 
+For Star Technology, follow the
+[clean upgrade runbook](star-technology-upgrades.md). The CurseForge Generic
+egg overlays files during reinstall, so the old pack-managed directories must
+be staged first and the result verified against the release archive.
+
 ## Infrarust backend addressing
 
 Wings does not literally bind a published container port to a `127.0.0.1`
