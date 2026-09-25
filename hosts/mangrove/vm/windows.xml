@@ -153,6 +153,9 @@
     <controller type='sata' index='0'>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x1f' function='0x2'/>
     </controller>
+    <controller type='virtio-serial' index='0'>
+      <address type='pci' domain='0x0000' bus='0x07' slot='0x00' function='0x0'/>
+    </controller>
     <interface type='network'>
       <mac address='52:54:00:59:82:b6'/>
       <source network='default'/>
@@ -167,6 +170,10 @@
     <console type='pty'>
       <target type='serial' port='0'/>
     </console>
+    <channel type='unix'>
+      <target type='virtio' name='org.qemu.guest_agent.0'/>
+      <address type='virtio-serial' controller='0' bus='0' port='1'/>
+    </channel>
     <input type='tablet' bus='usb'>
       <address type='usb' bus='0' port='1'/>
     </input>

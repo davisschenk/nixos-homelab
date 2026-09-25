@@ -25,6 +25,8 @@
 
   programs.virt-manager.enable = true;
 
+  networking.firewall.trustedInterfaces = [ "virbr0" ];
+
   systemd.services.libvirtd.unitConfig.RequiresMountsFor = [ "/data/vm" ];
 
   environment.etc."libvirt/qemu/windows.xml".source = ../../hosts/mangrove/vm/windows.xml;
