@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ pkgs, ... }:
 {
   boot.kernelParams = [
     "intel_iommu=on"
@@ -27,9 +27,25 @@
 
   systemd.services.libvirtd.unitConfig.RequiresMountsFor = [ "/data/vm" ];
 
-  # Set NODATACOW on /data/vm so VM disk images bypass btrfs CoW and checksums.
+  environment.etc."libvirt/qemu/windows.xml".source = ../../hosts/mangrove/vm/windows.xml;
+
+  systemd.services.windows-vm-define = {
+    description = "Define the Windows gaming VM";
+    after = [ "libvirtd.service" ];
+    requires = [ "libvirtd.service" ];
+    wantedBy = [ "multi-user.target" ];
+    restartTriggers = [ ../../hosts/mangrove/vm/windows.xml ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+    };
+    script = ''
+      ${pkgs.libvirt}/bin/virsh define /etc/libvirt/qemu/windows.xml
+    '';
+  };
+
   systemd.tmpfiles.rules = [
-    "v /data/vm 0755 root root - --nocow"
+    "d /data/vm 0755 root root -"
   ];
 
   environment.persistence."/persist" = {
